@@ -173,7 +173,7 @@ class App {
 
     if (this.panelContainer) {
       this.panel = new DetailsPanel(this.panelContainer, {
-        onClose: () => this.handleReset(),
+        onClose: () => this.handlePanelClose(),
       });
     }
 
@@ -415,6 +415,14 @@ class App {
     this.panel?.showOffice(office, region);
 
     this.updateUI();
+  }
+
+  private handlePanelClose(): void {
+    if (this.state === States.LOCATION_VIEW && this.selectedRegion) {
+      this.handleRegionClick(this.selectedRegion.name);
+    } else if (this.state === States.REGION_VIEW) {
+      this.handleReset();
+    }
   }
 
   handleReset(): void {

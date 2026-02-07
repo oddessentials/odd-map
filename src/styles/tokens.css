@@ -166,6 +166,10 @@
 @media (max-width: 768px) {
   :root {
     --panel-width: 100%;
-    --header-height: 56px;
+    --header-height: 48px;
+  }
+
+  .logo-tagline {
+    display: none;
   }
 }

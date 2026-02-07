@@ -189,8 +189,6 @@ export class MapSvg {
         marker.setAttribute('tabindex', '0');
         marker.setAttribute('aria-label', `${office.city}, ${office.state} - ${office.officeType}`);
 
-        // Show markers by default (visible at all zoom levels)
-        markerGroup.style.opacity = '1';
         markerGroup.style.pointerEvents = 'auto';
 
         marker.addEventListener('click', (e: Event) => {
@@ -207,6 +205,21 @@ export class MapSvg {
           }
         });
 
+        // Transparent hit area for touch targets (~44px equivalent at region zoom)
+        const hitArea = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        hitArea.setAttribute('cx', '0');
+        hitArea.setAttribute('cy', '-8');
+        hitArea.setAttribute('r', '12');
+        hitArea.setAttribute('fill', 'transparent');
+        hitArea.setAttribute('stroke', 'none');
+        hitArea.setAttribute('pointer-events', 'all');
+        hitArea.addEventListener('click', (e: Event) => {
+          e.stopPropagation();
+          this.selectOffice(office);
+          this.options.onOfficeClick(office);
+        });
+
+        markerGroup.appendChild(hitArea);
         markerGroup.appendChild(marker);
         markersGroup.appendChild(markerGroup);
         successCount++;
@@ -369,7 +382,6 @@ export class MapSvg {
 
     const markerGroups = this.svgElement.querySelectorAll<SVGGElement>('.marker-group');
     markerGroups.forEach((group) => {
-      group.style.opacity = '1';
       group.style.pointerEvents = 'auto';
     });
   }
