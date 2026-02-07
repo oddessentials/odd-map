@@ -610,7 +610,6 @@ export class MapSvg {
     if (event.pointerType === 'mouse' && event.button !== 0) return;
 
     this.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
-    this.container.setPointerCapture(event.pointerId);
 
     if (this.pointers.size === 1) {
       // Single pointer: prepare for drag
@@ -629,6 +628,11 @@ export class MapSvg {
       // Two+ pointers: enter pinch mode, cancel any active drag
       this.isDragging = false;
       this.container.style.cursor = 'grab';
+
+      // Capture all pointers so pinch gestures aren't lost if a finger drifts outside
+      for (const id of this.pointers.keys()) {
+        this.container.setPointerCapture(id);
+      }
 
       const pts = Array.from(this.pointers.values());
       this.pinchStartPointers = [{ ...pts[0] }, { ...pts[1] }];
@@ -683,6 +687,7 @@ export class MapSvg {
     if (!this.isDragging) {
       this.isDragging = true;
       this.container.style.cursor = 'grabbing';
+      this.container.setPointerCapture(event.pointerId);
     }
 
     // Compute new viewBox from drag start (cumulative, not incremental)

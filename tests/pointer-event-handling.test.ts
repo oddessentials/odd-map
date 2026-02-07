@@ -69,9 +69,6 @@ function simulatePointerDown(
 
   state.pointers.set(pointerId, { x, y });
 
-  // Fix 2: capture immediately on pointerdown
-  state.capturedPointers.add(pointerId);
-
   if (state.pointers.size === 1) {
     state.dragStartScreenPos = { x, y };
     state.isDragging = false;
@@ -80,6 +77,12 @@ function simulatePointerDown(
   } else if (state.pointers.size >= 2) {
     state.isDragging = false;
     state.cursor = 'grab';
+
+    // Capture all pointers on pinch entry so gestures aren't lost
+    for (const id of state.pointers.keys()) {
+      state.capturedPointers.add(id);
+    }
+
     state.isPinching = true;
   }
 
@@ -109,7 +112,8 @@ function simulatePointerMove(state: PointerState, pointerId: number, x: number, 
   if (!state.isDragging) {
     state.isDragging = true;
     state.cursor = 'grabbing';
-    // Fix 2: no setPointerCapture here — already done in pointerdown
+    // Capture pointer when drag starts (not on pointerdown — preserves click targets)
+    state.capturedPointers.add(pointerId);
   }
 }
 
@@ -212,13 +216,21 @@ describe('Pointer Capture Lifecycle (Fix 2)', () => {
     state = createPointerState();
   });
 
-  it('captures pointer immediately on pointerdown', () => {
+  it('does NOT capture pointer on simple pointerdown (preserves click targets)', () => {
     simulatePointerDown(state, 1, 100, 200);
+
+    // Single pointer down should not capture — allows click events on child elements
+    expect(state.capturedPointers.has(1)).toBe(false);
+  });
+
+  it('captures pointer when drag threshold is exceeded', () => {
+    simulatePointerDown(state, 1, 100, 200);
+    simulatePointerMove(state, 1, 200, 200); // exceeds threshold
 
     expect(state.capturedPointers.has(1)).toBe(true);
   });
 
-  it('captures both pointers in a pinch gesture', () => {
+  it('captures all pointers when entering pinch mode', () => {
     simulatePointerDown(state, 1, 100, 200);
     simulatePointerDown(state, 2, 200, 200);
 
@@ -226,8 +238,9 @@ describe('Pointer Capture Lifecycle (Fix 2)', () => {
     expect(state.capturedPointers.has(2)).toBe(true);
   });
 
-  it('releases pointer capture on pointerup', () => {
+  it('releases pointer capture on pointerup after drag', () => {
     simulatePointerDown(state, 1, 100, 200);
+    simulatePointerMove(state, 1, 200, 200); // start drag → captures
     simulatePointerUp(state, 1);
 
     expect(state.capturedPointers.has(1)).toBe(false);
@@ -245,15 +258,13 @@ describe('Pointer Capture Lifecycle (Fix 2)', () => {
     expect(state.releasedPointers.has(2)).toBe(true);
   });
 
-  it('does not call setPointerCapture during drag move', () => {
+  it('tap-and-release does not capture (click events fire on original target)', () => {
     simulatePointerDown(state, 1, 100, 200);
-    const capturedBefore = new Set(state.capturedPointers);
+    // No move — just lift
+    simulatePointerUp(state, 1);
 
-    // Move beyond threshold to start drag
-    simulatePointerMove(state, 1, 200, 200);
-
-    // No new captures should have been added during move
-    expect(state.capturedPointers).toEqual(capturedBefore);
+    // Pointer was never captured, so click event fires on the original target element
+    expect(state.capturedPointers.size).toBe(0);
   });
 });
 
@@ -431,7 +442,6 @@ describe('Pinch-to-Drag Transition Edge Cases', () => {
     simulatePointerUp(state, 99); // never registered
 
     expect(state.pointers.size).toBe(1);
-    expect(state.capturedPointers.has(1)).toBe(true);
   });
 
   it('ignores pointermove for unknown pointer IDs', () => {
