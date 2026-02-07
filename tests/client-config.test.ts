@@ -638,3 +638,164 @@ describe('loadClientConfig schema version pre-check (T028)', () => {
     }
   });
 });
+
+describe('MapProviderConfig schema validation (T009)', () => {
+  it('accepts config with mapProvider using "maplibre" provider', () => {
+    const config = createValidConfig({
+      theme: {
+        mapProvider: {
+          provider: 'maplibre',
+          defaultZoom: 15,
+        },
+      },
+    });
+    const result = ClientConfigSchema.safeParse(config);
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts config with mapProvider using "apple" provider', () => {
+    const config = createValidConfig({
+      theme: {
+        mapProvider: {
+          provider: 'apple',
+          appleMapToken: 'eyJhbGciOiJFUzI1NiJ9.test',
+          defaultZoom: 16,
+        },
+      },
+    });
+    const result = ClientConfigSchema.safeParse(config);
+    expect(result.success).toBe(true);
+  });
+
+  it('defaults provider to "maplibre" when mapProvider is present but provider is omitted', () => {
+    const config = createValidConfig({
+      theme: {
+        mapProvider: {
+          defaultZoom: 14,
+        },
+      },
+    });
+    const result = ClientConfigSchema.safeParse(config);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.theme?.mapProvider?.provider).toBe('maplibre');
+    }
+  });
+
+  it('defaults defaultZoom to 15 when omitted', () => {
+    const config = createValidConfig({
+      theme: {
+        mapProvider: {
+          provider: 'maplibre',
+        },
+      },
+    });
+    const result = ClientConfigSchema.safeParse(config);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.theme?.mapProvider?.defaultZoom).toBe(15);
+    }
+  });
+
+  it('accepts config with no mapProvider at all (entire section omitted)', () => {
+    const config = createValidConfig({
+      theme: {
+        primaryColor: '#ff0000',
+      },
+    });
+    const result = ClientConfigSchema.safeParse(config);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.theme?.mapProvider).toBeUndefined();
+    }
+  });
+
+  it('accepts config with no theme at all', () => {
+    const config = createValidConfig();
+    const result = ClientConfigSchema.safeParse(config);
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects invalid provider enum value', () => {
+    const config = createValidConfig({
+      theme: {
+        mapProvider: {
+          provider: 'google',
+          defaultZoom: 15,
+        },
+      },
+    });
+    const result = ClientConfigSchema.safeParse(config);
+    expect(result.success).toBe(false);
+  });
+
+  it('validates tileStyleUrl must be a valid URL', () => {
+    const config = createValidConfig({
+      theme: {
+        mapProvider: {
+          provider: 'maplibre',
+          tileStyleUrl: 'not-a-url',
+          defaultZoom: 15,
+        },
+      },
+    });
+    const result = ClientConfigSchema.safeParse(config);
+    expect(result.success).toBe(false);
+  });
+
+  it('accepts valid tileStyleUrl', () => {
+    const config = createValidConfig({
+      theme: {
+        mapProvider: {
+          provider: 'maplibre',
+          tileStyleUrl: 'https://tiles.example.com/style.json',
+          defaultZoom: 15,
+        },
+      },
+    });
+    const result = ClientConfigSchema.safeParse(config);
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects defaultZoom below 1', () => {
+    const config = createValidConfig({
+      theme: {
+        mapProvider: {
+          provider: 'maplibre',
+          defaultZoom: 0,
+        },
+      },
+    });
+    const result = ClientConfigSchema.safeParse(config);
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects defaultZoom above 20', () => {
+    const config = createValidConfig({
+      theme: {
+        mapProvider: {
+          provider: 'maplibre',
+          defaultZoom: 21,
+        },
+      },
+    });
+    const result = ClientConfigSchema.safeParse(config);
+    expect(result.success).toBe(false);
+  });
+
+  it('accepts defaultZoom at boundary values (1 and 20)', () => {
+    const configMin = createValidConfig({
+      theme: {
+        mapProvider: { provider: 'maplibre', defaultZoom: 1 },
+      },
+    });
+    expect(ClientConfigSchema.safeParse(configMin).success).toBe(true);
+
+    const configMax = createValidConfig({
+      theme: {
+        mapProvider: { provider: 'maplibre', defaultZoom: 20 },
+      },
+    });
+    expect(ClientConfigSchema.safeParse(configMax).success).toBe(true);
+  });
+});

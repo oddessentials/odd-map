@@ -16,7 +16,6 @@
 
     <!-- Preconnect for performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="dns-prefetch" href="https://www.google.com" />
     <script type="importmap">
       {
         "imports": {
@@ -71,15 +70,12 @@
           Reset View
         </button>
 
-        <!-- 2D/3D toggle button -->
-        <button
-          id="map-toggle"
-          class="btn btn-secondary map-toggle"
-          aria-label="Switch to 2D map"
-          title="Switch to 2D view"
-        >
-          2D
-        </button>
+        <!-- Map mode selector -->
+        <div class="mode-selector" role="group" aria-label="Map mode">
+          <button class="mode-btn active" data-mode="2d" aria-pressed="true">2D</button>
+          <button class="mode-btn" data-mode="3d" aria-pressed="false">3D</button>
+          <button class="mode-btn" data-mode="tile" aria-pressed="false">Tile</button>
+        </div>
 
         <!-- Spin toggle button (3D mode only) -->
         <button

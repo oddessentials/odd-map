@@ -4,6 +4,8 @@ Auto-generated from all feature plans. Last updated: 2026-02-05
 
 ## Active Technologies
 
+- TypeScript 5.7 (ES2022 target), JavaScript (map-3d.js) + Three.js 0.182, Vite 7.3.1, MapLibre GL JS (new, ~200KB gzipped), Apple MapKit JS (new, CDN-loaded) (012-interactive-map-providers)
+
 - TypeScript 5.7 (ES2022 target), JavaScript (map-3d.js) + Three.js 0.182, Vite 7.3.1, Vitest 4.0.17 (009-scroll-wheel-behavior)
 - N/A — UI state only, no persistence (009-scroll-wheel-behavior)
 
@@ -42,9 +44,9 @@ TypeScript 5.x (ES2022 target), JavaScript (map-3d.js): Follow standard conventi
 
 ## Recent Changes
 
-- 011-fix-marker-panel-state: Added TypeScript 5.7 (ES2022 target), JavaScript (map-3d.js) + Three.js 0.182, Vite 7.3.1
+- 012-interactive-map-providers: Added TypeScript 5.7 (ES2022 target), JavaScript (map-3d.js) + Three.js 0.182, Vite 7.3.1, MapLibre GL JS (new, ~200KB gzipped), Apple MapKit JS (new, CDN-loaded)
 
-- 010-drag-pan-behavior: Added TypeScript 5.7 (ES2022 target), JavaScript (map-3d.js) + Three.js 0.182, Vite 7.3.1, Vitest 4.0.17
+- 011-fix-marker-panel-state: Added TypeScript 5.7 (ES2022 target), JavaScript (map-3d.js) + Three.js 0.182, Vite 7.3.1
 
 - 010-drag-pan-behavior: Added TypeScript 5.7 (ES2022 target), JavaScript (map-3d.js) + Three.js 0.182, Vite 7.3.1, Vitest 4.0.17
 

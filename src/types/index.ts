@@ -101,6 +101,12 @@ export interface BrandTheme {
   accentColor?: string;
   regionColors?: Record<string, string>;
   cameraViews?: Record<string, CameraView>;
+  mapProvider?: {
+    provider: 'maplibre' | 'apple';
+    tileStyleUrl?: string;
+    appleMapToken?: string;
+    defaultZoom: number;
+  };
 }
 
 /**

@@ -12,11 +12,13 @@
  */
 
 import { escapeHtml } from '../lib/escape-html.js';
+import { MiniMap } from './mini-map.js';
 
 export class OfficeModal {
   constructor() {
     this.modal = null;
     this.overlay = null;
+    this.miniMap = null;
     this.focusableElements = [];
     this.previouslyFocused = null;
     this.isOpen = false;
@@ -132,6 +134,7 @@ export class OfficeModal {
                         : ''
                     }
                 </div>
+                <div class="mini-map-container" id="modal-mini-map"></div>
             </div>
             <div class="office-modal-footer">
                 <a 
@@ -161,6 +164,19 @@ export class OfficeModal {
       this.overlay.classList.add('visible');
       this.modal.classList.add('visible');
     });
+
+    // Initialize mini-map if coordinates available
+    if (office.coordinates?.lat && office.coordinates?.lon) {
+      const miniMapContainer = this.modal.querySelector('#modal-mini-map');
+      if (miniMapContainer) {
+        const brandColor =
+          getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() ||
+          '#00396c';
+
+        this.miniMap = new MiniMap(miniMapContainer);
+        this.miniMap.show(office, brandColor);
+      }
+    }
   }
 
   buildDirectionsUrl(office) {
@@ -234,8 +250,15 @@ export class OfficeModal {
     if (this.modal) this.modal.classList.remove('visible');
     if (this.overlay) this.overlay.classList.remove('visible');
 
-    // Remove after animation
+    // Remove after animation — dispose mini-map INSIDE the callback,
+    // BEFORE removeChild, to avoid orphaned WebGL contexts
     setTimeout(() => {
+      // Dispose mini-map while DOM is still attached (WebGL context valid)
+      if (this.miniMap) {
+        this.miniMap.dispose();
+        this.miniMap = null;
+      }
+
       if (this.modal?.parentNode) {
         this.modal.parentNode.removeChild(this.modal);
       }

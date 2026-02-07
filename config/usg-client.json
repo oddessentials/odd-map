@@ -400,6 +400,14 @@
       ]
     }
   ],
+  "theme": {
+    "primaryColor": "#00396c",
+    "accentColor": "#0066b2",
+    "mapProvider": {
+      "provider": "maplibre",
+      "defaultZoom": 14
+    }
+  },
   "globalContacts": {
     "mainPhone": "844.467.5465",
     "mainEmail": "getconnected@usgins.com",
