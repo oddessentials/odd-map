@@ -1,0 +1,4 @@
+#!/usr/bin/env sh
+# Pre-push: Full verification before pushing to remote
+# This is the "Victory Gate" per repo-standards
+npm run verify

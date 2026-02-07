@@ -1,0 +1,145 @@
+{
+  "schemaVersion": 1,
+  "clientId": "oddessentials",
+  "name": "Odd Essentials",
+  "copyrightHolder": "Odd Essentials LLC",
+  "tagline": "Force multipliers for small businesses.",
+  "offices": [
+    {
+      "officeCode": "OE NY1",
+      "state": "New York",
+      "city": "New York",
+      "officeType": "Branch Office",
+      "address": "742 Evergreen Terrace, Suite 400, New York, NY 10001",
+      "directionsUrl": "https://www.google.com/maps/dir//742+Evergreen+Terrace+New+York+NY+10001",
+      "region": "Northeast Region",
+      "coordinates": {
+        "lat": 40.7128,
+        "lon": -74.006,
+        "source": "verified",
+        "confidence": "high",
+        "approximate": false
+      }
+    },
+    {
+      "officeCode": "OE FL1",
+      "state": "Florida",
+      "city": "Miami",
+      "officeType": "Satellite Sales Office",
+      "address": null,
+      "region": "South Region",
+      "coordinates": {
+        "lat": 25.7617,
+        "lon": -80.1918,
+        "source": "business_district",
+        "confidence": "medium",
+        "approximate": true
+      }
+    },
+    {
+      "officeCode": "OE OR1",
+      "state": "Oregon",
+      "city": "Portland",
+      "officeType": "Branch Office",
+      "address": "100 Peculiar Way, Portland, OR 97201",
+      "region": "West Region",
+      "coordinates": {
+        "lat": 45.5152,
+        "lon": -122.6784,
+        "source": "verified",
+        "confidence": "high",
+        "approximate": false
+      }
+    },
+    {
+      "officeCode": "OE WA1",
+      "state": "Washington",
+      "city": "Seattle",
+      "officeType": "Satellite Sales Office",
+      "address": null,
+      "region": "West Region",
+      "coordinates": {
+        "lat": 47.6062,
+        "lon": -122.3321,
+        "source": "city_centroid",
+        "confidence": "low",
+        "approximate": true
+      }
+    },
+    {
+      "officeCode": "OE AZ1",
+      "state": "Arizona",
+      "city": "Phoenix",
+      "officeType": "Branch Office",
+      "address": "55 Mirage Blvd, Phoenix, AZ 85001",
+      "region": "Phantom Region",
+      "coordinates": {
+        "lat": 33.4484,
+        "lon": -112.074,
+        "source": "verified",
+        "confidence": "high",
+        "approximate": false
+      }
+    }
+  ],
+  "regionalPersonnel": {
+    "Northeast Region": [
+      {
+        "name": "Jane Quirk",
+        "title": "Regional Director",
+        "phone": "212.555.0101",
+        "email": "jane@oddessentials.com",
+        "vcardUrl": "https://example.com/vcards/jquirk"
+      }
+    ],
+    "South Region": [
+      {
+        "name": "Marco Bizarre",
+        "title": "Southern Regional Manager",
+        "phone": "305.555.0202",
+        "email": "marco@oddessentials.com"
+      }
+    ]
+  },
+  "specialtyDivisions": [
+    {
+      "name": "Gadget Insurance",
+      "personnel": [
+        {
+          "name": "Ada Gizmo",
+          "title": "Gadget Underwriter",
+          "phone": "800.555.0303",
+          "email": "ada@oddessentials.com",
+          "vcardUrl": "https://example.com/vcards/agizmo"
+        }
+      ]
+    },
+    {
+      "name": "Umbrella Services",
+      "personnel": []
+    }
+  ],
+  "globalContacts": {
+    "mainPhone": "800.555.6633",
+    "mainEmail": "hello@oddessentials.com",
+    "departmentEmails": {
+      "claims": "claims@oddessentials.com",
+      "accounting": "billing@oddessentials.com"
+    }
+  },
+  "theme": {
+    "primaryColor": "#8e44ad",
+    "accentColor": "#e67e22",
+    "regionColors": {
+      "Northeast Region": "#2980b9",
+      "South Region": "#27ae60"
+    },
+    "cameraViews": {
+      "Northeast Region": {
+        "distance": 1.5,
+        "lat": 41.0,
+        "lon": -74.0
+      }
+    }
+  }
+}

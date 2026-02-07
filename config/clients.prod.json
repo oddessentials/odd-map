@@ -1,0 +1,5 @@
+{
+  "clients": ["oddessentials", "usg"],
+  "configPath": "config/{clientId}-map-config.json",
+  "clientConfigPath": "config/{clientId}-client.json"
+}

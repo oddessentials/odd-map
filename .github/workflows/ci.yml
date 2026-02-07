@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: CRLF Detection
+        run: |
+          set -euo pipefail
+          if git ls-files --eol | grep -E 'w/crlf' | grep -E '\.(sh|ts|tsx|js|jsx|mjs|cjs|json|ya?ml)$' >/dev/null; then
+            echo "::error::CRLF line endings detected in tracked source/script files. Use LF."
+            echo "Offending files:"
+            git ls-files --eol | grep -E 'w/crlf' | grep -E '\.(sh|ts|tsx|js|jsx|mjs|cjs|json|ya?ml)$' || true
+            exit 1
+          fi
+
+      - name: Verify (lint, format, typecheck, test)
+        run: npm run verify
+
+      - name: Build Verification
+        run: npm run build
+
+  deploy:
+    needs: verify
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build demo site
+        run: VITE_CLIENT_REGISTRY=demo npx vite build --base /odd-map/
+
+      - name: Replace docs with fresh build
+        run: |
+          rm -rf docs
+          mkdir -p docs
+          cp -r dist/* docs/
+
+      - name: Deploy to docs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/
+          if git diff --cached --quiet docs/; then
+            echo "No changes to deploy — skipping commit."
+          else
+            git commit -m "chore: deploy demo site to /docs [skip ci]"
+            git push
+          fi

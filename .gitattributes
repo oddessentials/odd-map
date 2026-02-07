@@ -1,0 +1,18 @@
+# Default: auto-detect text files, normalize to LF in repo
+* text=auto eol=lf
+
+# Force scripts and hooks to always use LF (Unix compatibility)
+*.sh text eol=lf
+*.bash text eol=lf
+.husky/* text eol=lf
+
+# Explicitly ensure Windows batch files use CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Prevent normalization of binary files
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff binary
+*.woff2 binary

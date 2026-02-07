@@ -1,0 +1,142 @@
+{
+  "configVersion": 1,
+  "mapId": "usa-regions",
+  "clientId": "usg",
+  "mapAssetHash": "a2c197e5aea7a000ae85cc5c34599c63bb8d06eeac0549c76ff23c5ece58a286",
+  "viewBox": {
+    "x": 0,
+    "y": 0,
+    "width": 960,
+    "height": 600
+  },
+  "coordinates": [
+    {
+      "officeCode": "USG PA1",
+      "lat": 40.2628,
+      "lon": -80.1631,
+      "svgX": 754.84,
+      "svgY": 241.73
+    },
+    {
+      "officeCode": "USG PA2",
+      "lat": 39.9512,
+      "lon": -75.1645,
+      "svgX": 838.98,
+      "svgY": 232.42
+    },
+    {
+      "officeCode": "USG MA1",
+      "lat": 42.3554,
+      "lon": -71.064,
+      "svgX": 892.35,
+      "svgY": 163.75
+    },
+    {
+      "officeCode": "USG FL1",
+      "lat": 28.0787,
+      "lon": -82.5169,
+      "svgX": 754.27,
+      "svgY": 518.08
+    },
+    {
+      "officeCode": "USG GA1",
+      "lat": 34.0754,
+      "lon": -84.2941,
+      "svgX": 703.08,
+      "svgY": 389.79
+    },
+    {
+      "officeCode": "USG LA1",
+      "lat": 30.4754,
+      "lon": -90.0829,
+      "svgX": 602.59,
+      "svgY": 480.03
+    },
+    {
+      "officeCode": "USG TX1",
+      "lat": 32.7357,
+      "lon": -97.1081,
+      "svgX": 468.69,
+      "svgY": 432.89
+    },
+    {
+      "officeCode": "USG TX2",
+      "lat": 29.8649,
+      "lon": -95.4962,
+      "svgX": 499.05,
+      "svgY": 497.15
+    },
+    {
+      "officeCode": "USG CA1",
+      "lat": 33.6407,
+      "lon": -117.7448,
+      "svgX": 92.51,
+      "svgY": 367.13
+    },
+    {
+      "officeCode": "USG US1",
+      "lat": 48.2766,
+      "lon": -116.5535,
+      "svgX": 184.2,
+      "svgY": 51.96
+    },
+    {
+      "officeCode": "USG MN1",
+      "lat": 45.0567,
+      "lon": -93.1414,
+      "svgX": 534.24,
+      "svgY": 155.84
+    },
+    {
+      "officeCode": "USG MI1",
+      "lat": 42.5803,
+      "lon": -83.1431,
+      "svgX": 698.21,
+      "svgY": 197.74
+    },
+    {
+      "officeCode": "USG IL1",
+      "lat": 41.8807,
+      "lon": -87.6298,
+      "svgX": 626.93,
+      "svgY": 221.51
+    }
+  ],
+  "regions": [
+    {
+      "id": "northeast",
+      "name": "Northeast Region",
+      "svgPathId": "region-usg-northeast-region"
+    },
+    {
+      "id": "southeast",
+      "name": "Southeast Region",
+      "svgPathId": "region-usg-southeast-region"
+    },
+    {
+      "id": "midwest",
+      "name": "Midwest Region",
+      "svgPathId": "region-usg-midwest-region"
+    },
+    {
+      "id": "south",
+      "name": "South Region",
+      "svgPathId": "region-usg-south-region"
+    },
+    {
+      "id": "southern-california",
+      "name": "Southern California",
+      "svgPathId": "region-usg-southern-california"
+    },
+    {
+      "id": "west",
+      "name": "West Region",
+      "svgPathId": "region-usg-west-region"
+    }
+  ],
+  "projection": {
+    "type": "geoAlbersUsa",
+    "scale": 1276,
+    "translate": [479, 299]
+  }
+}

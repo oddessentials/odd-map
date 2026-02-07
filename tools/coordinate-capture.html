@@ -1,0 +1,222 @@
+<!doctype html>
+<html>
+  <head>
+    <title>SVG Coordinate Capture Tool</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        padding: 20px;
+      }
+
+      #map-container {
+        border: 1px solid #ccc;
+        display: inline-block;
+        position: relative;
+      }
+
+      #overlay-canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        pointer-events: none;
+      }
+
+      #output {
+        margin-top: 20px;
+      }
+
+      pre {
+        background: #f5f5f5;
+        padding: 10px;
+        max-height: 400px;
+        overflow: auto;
+      }
+
+      .error {
+        color: red;
+      }
+
+      .success {
+        color: green;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1>SVG Coordinate Capture Tool</h1>
+    <p>Click on the map to capture coordinates. Enter office code for each point.</p>
+    <div id="status"></div>
+    <div id="map-container"></div>
+    <div id="output">
+      <h3>Captured Coordinates</h3>
+      <pre id="coords">[]</pre>
+      <button onclick="exportConfig()">Export Config JSON</button>
+      <button onclick="clearCoords()">Clear All</button>
+    </div>
+    <script type="module">
+      import {
+        validateCoordinate,
+        validateCaptureSession,
+        formatValidationResults,
+      } from '../src/lib/coordinate-validation.js';
+
+      async function loadOffices() {
+        const res = await fetch('../config/usg-client.json');
+        const config = await res.json();
+        return config.offices;
+      }
+
+      const capturedCoords = [];
+      let svg, canvas, ctx, viewBox;
+
+      async function init() {
+        // Load SVG
+        const res = await fetch('../src/assets/usa-regions.svg');
+        const svgText = await res.text();
+        const container = document.getElementById('map-container');
+        container.innerHTML = svgText;
+
+        svg = container.querySelector('svg');
+        if (!svg) throw new Error('No SVG element found');
+
+        // Parse viewBox
+        const vb = svg.getAttribute('viewBox').split(/\s+/).map(Number);
+        viewBox = { x: vb[0], y: vb[1], width: vb[2], height: vb[3] };
+
+        // Create overlay canvas for visual verification
+        canvas = document.createElement('canvas');
+        canvas.id = 'overlay-canvas';
+        canvas.width = svg.clientWidth;
+        canvas.height = svg.clientHeight;
+        container.appendChild(canvas);
+        ctx = canvas.getContext('2d');
+
+        // Bind click handler using SVG element's CTM
+        svg.addEventListener('click', handleClick);
+
+        updateStatus();
+        console.log('✅ Tool ready. ViewBox:', viewBox);
+      }
+
+      function handleClick(e) {
+        // Use the SVG element's CTM (not container's) for zoom immunity
+        const svgEl = e.currentTarget;
+        const ctm = svgEl.getScreenCTM();
+
+        if (!ctm) {
+          console.error('getScreenCTM() returned null');
+          return;
+        }
+
+        const pt = svgEl.createSVGPoint();
+        pt.x = e.clientX;
+        pt.y = e.clientY;
+        const svgPt = pt.matrixTransform(ctm.inverse());
+
+        // Round to 2 decimals
+        const x = Math.round(svgPt.x * 100) / 100;
+        const y = Math.round(svgPt.y * 100) / 100;
+
+        // Check bounds
+        if (x < viewBox.x || x > viewBox.width || y < viewBox.y || y > viewBox.height) {
+          alert(`⚠️ Coordinate (${x}, ${y}) is outside viewBox bounds!`);
+          return;
+        }
+
+        const officeCode = prompt('Enter office code (e.g., USG PA1):');
+        if (!officeCode) return;
+
+        const lat = parseFloat(prompt('Enter latitude:'));
+        const lon = parseFloat(prompt('Enter longitude:'));
+
+        capturedCoords.push({ officeCode, lat, lon, svgX: x, svgY: y });
+
+        // Visual verification: draw dot at captured location
+        drawVerificationDot(x, y);
+
+        updateDisplay();
+        updateStatus();
+      }
+
+      function drawVerificationDot(svgX, svgY) {
+        // Convert SVG coords to canvas coords
+        const scaleX = canvas.width / viewBox.width;
+        const scaleY = canvas.height / viewBox.height;
+        const canvasX = (svgX - viewBox.x) * scaleX;
+        const canvasY = (svgY - viewBox.y) * scaleY;
+
+        ctx.fillStyle = 'lime';
+        ctx.beginPath();
+        ctx.arc(canvasX, canvasY, 5, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+
+      function updateDisplay() {
+        document.getElementById('coords').textContent = JSON.stringify(capturedCoords, null, 2);
+      }
+
+      async function updateStatus() {
+        const allOffices = await loadOffices();
+        const total = allOffices.length;
+        const captured = capturedCoords.length;
+        const missing = allOffices.filter(
+          (o) => !capturedCoords.some((c) => c.officeCode === o.officeCode)
+        );
+
+        const status = document.getElementById('status');
+        if (missing.length === 0 && captured > 0) {
+          status.innerHTML = `<p class="success">✅ Complete: ${captured}/${total} offices captured</p>`;
+        } else {
+          status.innerHTML = `
+          <p class="error">⚠️ Incomplete: ${captured}/${total} offices</p>
+          <details>
+            <summary>Missing offices (${missing.length})</summary>
+            <ul>${missing.map((o) => `<li>${o.officeCode}: ${o.city}, ${o.state}</li>`).join('')}</ul>
+          </details>
+        `;
+        }
+      }
+
+      async function exportConfig() {
+        const allOffices = await loadOffices();
+        const missing = allOffices.filter(
+          (o) => !capturedCoords.some((c) => c.officeCode === o.officeCode)
+        );
+
+        if (missing.length > 0) {
+          alert(`❌ Cannot export: ${missing.length} offices missing coordinates`);
+          return;
+        }
+
+        const config = {
+          configVersion: 1,
+          mapId: 'usa-regions',
+          clientId: 'usg',
+          mapAssetHash: '<run scripts/generate-map-hash.ts>',
+          viewBox,
+          coordinates: capturedCoords,
+          regions: [], // Add manually
+        };
+
+        navigator.clipboard.writeText(JSON.stringify(config, null, 2));
+        alert('✅ Config copied to clipboard!');
+      }
+
+      window.clearCoords = function () {
+        if (confirm('Clear all captured coordinates?')) {
+          capturedCoords.length = 0;
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          updateDisplay();
+          updateStatus();
+        }
+      };
+
+      window.exportConfig = exportConfig;
+
+      init().catch((err) => console.error('Init failed:', err));
+    </script>
+  </body>
+</html>

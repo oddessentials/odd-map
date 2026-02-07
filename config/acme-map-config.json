@@ -1,0 +1,52 @@
+{
+  "configVersion": 1,
+  "mapId": "usa-regions",
+  "clientId": "acme",
+  "mapAssetHash": "a2c197e5aea7a000ae85cc5c34599c63bb8d06eeac0549c76ff23c5ece58a286",
+  "viewBox": {
+    "x": 0,
+    "y": 0,
+    "width": 960,
+    "height": 600
+  },
+  "coordinates": [
+    {
+      "officeCode": "ACME TX1",
+      "lat": 32.7767,
+      "lon": -96.797,
+      "svgX": 465.0,
+      "svgY": 380.0
+    },
+    {
+      "officeCode": "ACME CA1",
+      "lat": 34.0522,
+      "lon": -118.2437,
+      "svgX": 140.0,
+      "svgY": 370.0
+    },
+    {
+      "officeCode": "ACME NY1",
+      "lat": 40.7128,
+      "lon": -74.006,
+      "svgX": 790.0,
+      "svgY": 220.0
+    }
+  ],
+  "regions": [
+    {
+      "id": "south",
+      "name": "South Region",
+      "svgPathId": "region-acme-south-region"
+    },
+    {
+      "id": "west",
+      "name": "West Region",
+      "svgPathId": "region-acme-west-region"
+    },
+    {
+      "id": "northeast",
+      "name": "Northeast Region",
+      "svgPathId": "region-acme-northeast-region"
+    }
+  ]
+}

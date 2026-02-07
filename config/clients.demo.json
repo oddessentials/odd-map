@@ -1,0 +1,6 @@
+{
+  "clients": ["oddessentials", "usg"],
+  "defaultClient": "oddessentials",
+  "configPath": "config/{clientId}-map-config.json",
+  "clientConfigPath": "config/{clientId}-client.json"
+}

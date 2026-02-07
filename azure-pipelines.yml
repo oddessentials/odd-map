@@ -1,0 +1,127 @@
+trigger:
+  branches:
+    include:
+      - main
+      - feature/*
+      - feat/*
+      - chore/*
+      - fix/*
+
+pr:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  NODE_VERSION: '22.x'
+
+stages:
+  # -------------------------
+  # AI Review Stage (PR Only)
+  # -------------------------
+  - stage: AIReview
+    displayName: AI Code Review
+    condition: eq(variables['Build.Reason'], 'PullRequest')
+    jobs:
+      - job: Review
+        # pool:
+        #   name: Default
+        #   demands:
+        #     - ai-review # OSCR agent with Ollama sidecar
+        steps:
+          - checkout: self
+            fetchDepth: 0
+            persistCredentials: true # ← Useful if you push tags/releases
+
+          - task: NodeTool@0
+            displayName: Setup Node.js
+            inputs:
+              versionSpec: '$(NODE_VERSION)'
+
+          # Clone odd-ai-reviewers (or use as submodule/package)
+          - script: |
+              git clone https://github.com/oddessentials/odd-ai-reviewers.git /tmp/odd-ai-reviewers
+              cd /tmp/odd-ai-reviewers
+              corepack enable
+              pnpm install --frozen-lockfile
+              pnpm build
+            displayName: Setup AI Reviewers
+
+          - script: pip3 install semgrep==1.148.0
+            displayName: Install Semgrep
+
+          - script: |
+              cd /tmp/odd-ai-reviewers
+              node router/dist/main.js review \
+                --repo $(Build.SourcesDirectory) \
+                --base $(System.PullRequest.TargetBranch) \
+                --head $(Build.SourceVersion)
+            displayName: Run AI Review
+            env:
+              # Ollama connection (OSCR sidecar)
+              OLLAMA_BASE_URL: http://ollama-sidecar:11434
+              OLLAMA_MODEL: codellama:7b
+              # ADO API access for PR comments
+              SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+              TF_BUILD: $(TF_BUILD) # ← Optional but explicit
+
+  # -------------------------
+  # CI Stage
+  # -------------------------
+  - stage: CI
+    displayName: CI
+    jobs:
+      # -------------------------
+      # quality
+      # -------------------------
+      - job: quality
+        displayName: quality
+        # pool:
+        #   name: Default # Your pool name
+        #   demands:
+        #     - Agent.OS -equals Linux
+        #     - docker
+        steps:
+          - checkout: self
+            fetchDepth: 0
+
+          - task: NodeTool@0
+            inputs:
+              versionSpec: '$(NODE_VERSION)'
+            displayName: 'Setup Node.js $(NODE_VERSION)'
+
+          - task: Cache@2
+            inputs:
+              key: 'npm | "$(Agent.OS)" | package-lock.json'
+              restoreKeys: |
+                npm | "$(Agent.OS)"
+              path: $(Pipeline.Workspace)/.npm
+            displayName: 'Cache npm'
+
+          - script: |
+              set -euo pipefail
+              npm ci --cache $(Pipeline.Workspace)/.npm
+            displayName: 'Install dependencies'
+
+          - script: |
+              set -euo pipefail
+              if git ls-files --eol | grep -E 'w/crlf' | grep -E '\.(sh|ts|tsx|js|jsx|mjs|cjs|json|ya?ml)$' >/dev/null; then
+                echo "##vso[task.logissue type=error]CRLF line endings detected in tracked source/script files. Use LF."
+                echo "Files:"
+                git ls-files --eol | grep -E 'w/crlf' | grep -E '\.(sh|ts|tsx|js|jsx|mjs|cjs|json|ya?ml)$' || true
+                exit 1
+              fi
+            displayName: 'CRLF Detection'
+
+          - script: |
+              set -euo pipefail
+              npm run verify
+            displayName: 'Verify (lint, format, typecheck, test)'
+
+          - script: |
+              set -euo pipefail
+              npm run build
+            displayName: 'Build Verification'

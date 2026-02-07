@@ -1,0 +1,101 @@
+{
+  "name": "odd-map",
+  "version": "1.0.0",
+  "description": "Interactive office locations map with multi-client white-label support",
+  "type": "module",
+  "scripts": {
+    "scrape": "python scripts/scrape_locations.py",
+    "geocode": "python scripts/geocode_locations.py",
+    "build:data": "python scripts/generate_data_artifact.py",
+    "data": "npm run scrape && npm run geocode && npm run build:data",
+    "dev": "vite",
+    "build": "vite build",
+    "build:full": "npm run data && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "verify:map": "npx tsx scripts/verify-map-integrity.ts",
+    "verify:map:strict": "npx tsx scripts/verify-map-integrity.ts --strict",
+    "verify:config": "npx tsx scripts/verify-config-files.ts",
+    "verify:svg-ids": "npx tsx scripts/verify-svg-ids.ts",
+    "verify:production": "npx tsx scripts/verify-svg-ids.ts && npx tsx scripts/verify-map-integrity.ts --strict",
+    "verify:all-clients": "npx tsx scripts/verify-all-clients.ts",
+    "generate:map-hash": "npx tsx scripts/generate-map-hash.ts",
+    "add-region-ids": "npx tsx scripts/add-region-ids.ts",
+    "add-region-ids:dry-run": "npx tsx scripts/add-region-ids.ts --dry-run",
+    "config:backup": "npx tsx scripts/config-backup.ts backup",
+    "config:restore": "npx tsx scripts/config-backup.ts restore",
+    "config:list": "npx tsx scripts/config-backup.ts list",
+    "test": "vitest",
+    "test:infrastructure": "npx tsx scripts/verify-map-integrity.ts && vitest run",
+    "test:ci": "npx tsx scripts/verify-all-clients.ts && vitest run",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "verify": "npm run typecheck && npm run lint && npm run format:check && npm run test:ci",
+    "verify:quick": "npm run lint && npm run format:check",
+    "commitlint": "commitlint --edit",
+    "release": "semantic-release",
+    "release:dry-run": "semantic-release --dry-run",
+    "prepare": "husky"
+  },
+  "keywords": [
+    "odd-map",
+    "oddessentials",
+    "white-label",
+    "locations",
+    "map",
+    "static-site"
+  ],
+  "author": "",
+  "license": "ISC",
+  "private": true,
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "dependencies": {
+    "three": "^0.182.0",
+    "topojson-client": "^3.1.0",
+    "us-atlas": "^3.0.1"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "20.3.1",
+    "@commitlint/config-conventional": "20.3.1",
+    "@eslint/js": "9.39.2",
+    "@oddessentials/repo-standards": "5.3.0",
+    "@semantic-release/changelog": "6.0.3",
+    "@semantic-release/git": "10.0.1",
+    "@types/d3-geo": "^3.1.0",
+    "@types/node": "22.19.7",
+    "@types/three": "0.182.0",
+    "@vitest/coverage-v8": "4.0.17",
+    "d3-geo": "^3.1.1",
+    "eslint": "9.39.2",
+    "eslint-config-prettier": "10.1.8",
+    "globals": "17.0.0",
+    "husky": "^9.1.0",
+    "jsdom": "27.4.0",
+    "lint-staged": "16.2.7",
+    "node-html-parser": "7.0.2",
+    "prettier": "3.8.0",
+    "semantic-release": "25.0.2",
+    "typescript": "^5.7.0",
+    "typescript-eslint": "8.53.0",
+    "vite": "7.3.1",
+    "vitest": "4.0.17",
+    "zod": "^4.3.5"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,mjs,cjs}": [
+      "eslint --fix --max-warnings 0",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml,css,html}": [
+      "prettier --write"
+    ],
+    "config/*-map-config.json": [
+      "npx tsx scripts/verify-config-files.ts"
+    ]
+  }
+}

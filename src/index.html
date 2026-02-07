@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Interactive locations map with regional offices and contact information."
+    />
+    <title>Locations Map</title>
+
+    <!-- Import Map for ES Modules -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.170.0/examples/jsm/"
+        }
+      }
+    </script>
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="./styles/base.css" />
+    <link rel="stylesheet" href="./styles/app.css" />
+
+    <!-- Preconnect for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="dns-prefetch" href="https://www.google.com" />
+  </head>
+
+  <body data-state="usa_view">
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="loading-screen">
+      <div class="loading-content">
+        <div id="loading-logo" class="loading-logo" aria-hidden="true"></div>
+        <div class="loading-spinner"></div>
+        <p class="loading-text">Loading locations...</p>
+      </div>
+    </div>
+
+    <!-- Header -->
+    <header class="header">
+      <div class="header-inner">
+        <!-- Logo placeholder with drop-in slot -->
+        <div class="logo-container">
+          <div class="logo-placeholder" aria-label="Company logo">
+            <span id="header-logo" class="logo-text"></span>
+            <span id="header-tagline" class="logo-tagline"></span>
+          </div>
+        </div>
+
+        <!-- Navigation breadcrumb -->
+        <nav class="breadcrumb" aria-label="Location navigation">
+          <span id="state-indicator" class="breadcrumb-text">USA</span>
+        </nav>
+
+        <!-- Reset button -->
+        <button id="reset-btn" class="btn btn-secondary reset-btn" hidden>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+            <path d="M3 3v5h5"></path>
+          </svg>
+          Reset View
+        </button>
+
+        <!-- 2D/3D toggle button -->
+        <button
+          id="map-toggle"
+          class="btn btn-secondary map-toggle"
+          aria-label="Switch to 2D map"
+          title="Switch to 2D view"
+        >
+          2D
+        </button>
+
+        <!-- Spin toggle button (3D mode only) -->
+        <button
+          id="spin-toggle"
+          type="button"
+          class="btn btn-secondary spin-toggle"
+          aria-label="Toggle globe rotation"
+          aria-pressed="false"
+          title="Toggle globe rotation"
+          hidden
+        >
+          ↻
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+      <div class="layout">
+        <!-- Left sidebar: Region list (mobile: bottom sheet) -->
+        <aside class="sidebar sidebar-left" id="region-list">
+          <!-- Populated by RegionList component -->
+        </aside>
+
+        <!-- Center: Map -->
+        <section class="map-section">
+          <div
+            id="map-container"
+            class="map-container"
+            role="application"
+            aria-label="Interactive locations map"
+          >
+            <!-- Populated by MapSvg component -->
+          </div>
+        </section>
+
+        <!-- Right sidebar: Details panel -->
+        <aside class="sidebar sidebar-right" id="details-panel">
+          <!-- Populated by DetailsPanel component -->
+        </aside>
+      </div>
+
+      <!-- Specialty Divisions (below map on all sizes) -->
+      <section class="specialty-section" id="specialty-divisions">
+        <!-- Populated by SpecialtyDivisionsPanel component -->
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="footer-inner">
+        <div class="footer-contact">
+          <span class="footer-label">Get Connected:</span>
+          <a id="footer-phone" href="#" class="footer-phone"></a>
+          <a id="footer-email" href="#" class="footer-email"></a>
+        </div>
+        <div class="footer-links">
+          <a id="footer-claims" href="#">Claims</a>
+          <a id="footer-lossruns" href="#">Loss Runs</a>
+          <a id="footer-accounting" href="#">Accounting</a>
+        </div>
+        <span id="accounting-contact" class="footer-accounting-contact"></span>
+        <div id="copyright" class="footer-copyright"></div>
+      </div>
+    </footer>
+
+    <!-- App Script (ES Module) -->
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Projection Calibration Tool</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+        margin: 20px;
+        background: #1a1a1a;
+        color: #e0e0e0;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      h1 {
+        color: #4fc3f7;
+        margin-bottom: 10px;
+      }
+      .instructions {
+        background: #2a2a2a;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        border-left: 4px solid #4fc3f7;
+      }
+      .map-container {
+        position: relative;
+        background: #fff;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+      }
+      svg {
+        display: block;
+        max-width: 100%;
+        height: auto;
+      }
+      .marker {
+        fill: #ff4444;
+        stroke: #fff;
+        stroke-width: 2;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .marker:hover {
+        fill: #ff6666;
+        r: 8;
+      }
+      .marker-label {
+        fill: #333;
+        font-size: 12px;
+        font-weight: bold;
+        pointer-events: none;
+        text-shadow:
+          0 0 3px #fff,
+          0 0 3px #fff;
+      }
+      .info-panel {
+        background: #2a2a2a;
+        padding: 15px;
+        border-radius: 8px;
+        margin-top: 20px;
+      }
+      .city-info {
+        display: inline-block;
+        margin: 10px 15px;
+        padding: 10px;
+        background: #333;
+        border-radius: 4px;
+      }
+      .city-name {
+        font-weight: bold;
+        color: #4fc3f7;
+      }
+      .coords {
+        font-family: 'Courier New', monospace;
+        font-size: 11px;
+        color: #b0b0b0;
+      }
+      .controls {
+        background: #2a2a2a;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+      }
+      .control-group {
+        display: inline-block;
+        margin: 5px 15px;
+      }
+      label {
+        display: inline-block;
+        width: 80px;
+        color: #b0b0b0;
+      }
+      input[type='number'] {
+        width: 80px;
+        padding: 5px;
+        background: #333;
+        border: 1px solid #555;
+        color: #e0e0e0;
+        border-radius: 4px;
+      }
+      button {
+        background: #4fc3f7;
+        color: #1a1a1a;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+        margin-left: 10px;
+      }
+      button:hover {
+        background: #6dd5ff;
+      }
+      .output-code {
+        background: #1a1a1a;
+        padding: 15px;
+        border-radius: 4px;
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        border: 1px solid #333;
+        margin-top: 10px;
+      }
+    </style>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🗺️ Projection Calibration Tool</h1>
+
+      <div class="instructions">
+        <strong>Instructions:</strong> Adjust the scale and translate parameters below until all red
+        markers appear in their correct state positions. The coordinates shown are where our
+        projection thinks they should be.
+      </div>
+
+      <div class="controls">
+        <div class="control-group">
+          <label>Scale:</label>
+          <input type="number" id="scale" value="1300" step="10" />
+        </div>
+        <div class="control-group">
+          <label>Translate X:</label>
+          <input type="number" id="translateX" value="480" step="5" />
+        </div>
+        <div class="control-group">
+          <label>Translate Y:</label>
+          <input type="number" id="translateY" value="300" step="5" />
+        </div>
+        <button onclick="updateProjection()">Update Markers</button>
+        <button onclick="copyCode()">Copy Code</button>
+      </div>
+
+      <div class="map-container">
+        <svg id="map" viewBox="0 0 960 600" style="background: #e8f4f8">
+          <!-- Map will be loaded here -->
+        </svg>
+      </div>
+
+      <div class="info-panel">
+        <h3 style="margin-top: 0">Test Cities & Coordinates:</h3>
+        <div id="cityInfo"></div>
+
+        <div class="output-code" id="outputCode"></div>
+      </div>
+    </div>
+
+    <script>
+      const testCities = [
+        { name: 'Canonsburg, PA', lat: 40.2628, lon: -80.1631, state: 'PA (western)' },
+        { name: 'Boston, MA', lat: 42.3554, lon: -71.064, state: 'MA (eastern)' },
+        { name: 'Philadelphia, PA', lat: 39.9512, lon: -75.1645, state: 'PA (SE)' },
+        { name: 'New York, NY', lat: 40.7128, lon: -74.006, state: 'NY (SE)' },
+        { name: 'Los Angeles, CA', lat: 34.0522, lon: -118.2437, state: 'CA (south)' },
+        { name: 'Chicago, IL', lat: 41.8781, lon: -87.6298, state: 'IL (NE)' },
+        { name: 'Houston, TX', lat: 29.7604, lon: -95.3698, state: 'TX (SE)' },
+        { name: 'Seattle, WA', lat: 47.6062, lon: -122.3321, state: 'WA (NW)' },
+        { name: 'Miami, FL', lat: 25.7617, lon: -80.1918, state: 'FL (south)' },
+      ];
+
+      let projection;
+      const svg = d3.select('#map');
+
+      // Load and display the USA map
+      async function loadMap() {
+        const data = await d3.json('../data/us-states-topo.json');
+        const geojson = topojson.feature(data, data.objects.states);
+
+        const path = d3.geoPath().projection(projection);
+
+        svg.selectAll('path').remove();
+        svg
+          .append('g')
+          .selectAll('path')
+          .data(geojson.features)
+          .enter()
+          .append('path')
+          .attr('d', path)
+          .attr('fill', '#d0e8f2')
+          .attr('stroke', '#fff')
+          .attr('stroke-width', 1);
+
+        updateMarkers();
+      }
+
+      function updateProjection() {
+        const scale = +document.getElementById('scale').value;
+        const translateX = +document.getElementById('translateX').value;
+        const translateY = +document.getElementById('translateY').value;
+
+        projection = d3.geoAlbersUsa().scale(scale).translate([translateX, translateY]);
+
+        updateMarkers();
+        updateInfo();
+      }
+
+      function updateMarkers() {
+        svg.selectAll('.marker').remove();
+        svg.selectAll('.marker-label').remove();
+
+        const markersGroup = svg.append('g');
+
+        testCities.forEach((city, i) => {
+          const coords = projection([city.lon, city.lat]);
+          if (!coords) return;
+
+          const [x, y] = coords;
+
+          markersGroup
+            .append('circle')
+            .attr('class', 'marker')
+            .attr('cx', x)
+            .attr('cy', y)
+            .attr('r', 6)
+            .append('title')
+            .text(`${city.name}\n${city.state}\n(${x.toFixed(1)}, ${y.toFixed(1)})`);
+
+          markersGroup
+            .append('text')
+            .attr('class', 'marker-label')
+            .attr('x', x + 10)
+            .attr('y', y + 4)
+            .text(city.name.split(',')[0]);
+        });
+      }
+
+      function updateInfo() {
+        const scale = +document.getElementById('scale').value;
+        const translateX = +document.getElementById('translateX').value;
+        const translateY = +document.getElementById('translateY').value;
+
+        let infoHTML = '';
+        testCities.forEach((city) => {
+          const coords = projection([city.lon, city.lat]);
+          if (!coords) return;
+          const [x, y] = coords;
+
+          infoHTML += `
+                    <div class="city-info">
+                        <div class="city-name">${city.name}</div>
+                        <div class="coords">Lat/Lon: ${city.lat}, ${city.lon}</div>
+                        <div class="coords">SVG: (${x.toFixed(1)}, ${y.toFixed(1)})</div>
+                        <div class="coords">${city.state}</div>
+                    </div>
+                `;
+        });
+
+        document.getElementById('cityInfo').innerHTML = infoHTML;
+
+        document.getElementById('outputCode').innerHTML = `
+                <strong>Projection Code:</strong><br>
+                <code>
+const projection = d3.geoAlbersUsa()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;.scale(${scale})<br>
+&nbsp;&nbsp;&nbsp;&nbsp;.translate([${translateX}, ${translateY}]);
+                </code>
+            `;
+      }
+
+      function copyCode() {
+        const scale = +document.getElementById('scale').value;
+        const translateX = +document.getElementById('translateX').value;
+        const translateY = +document.getElementById('translateY').value;
+
+        const code = `const projection = geoAlbersUsa()\n    .scale(${scale})\n    .translate([${translateX}, ${translateY}]);`;
+        navigator.clipboard.writeText(code);
+        alert('Code copied to clipboard!');
+      }
+
+      // Initialize
+      updateProjection();
+
+      // Try to load TopoJSON library for map rendering
+      const script = document.createElement('script');
+      script.src = 'https://unpkg.com/topojson@3';
+      script.onload = loadMap;
+      document.head.appendChild(script);
+    </script>
+  </body>
+</html>
