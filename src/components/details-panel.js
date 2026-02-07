@@ -80,6 +80,7 @@ export class DetailsPanel {
       'touchstart',
       (e) => {
         if (!this.container.classList.contains('open')) return;
+        if (!e.touches.length) return;
         const touch = e.touches[0];
         startY = touch.clientY;
         startScrollTop = this.bodyEl.scrollTop;
@@ -93,6 +94,7 @@ export class DetailsPanel {
       'touchmove',
       (e) => {
         if (!tracking) return;
+        if (!e.touches.length) return;
         const touch = e.touches[0];
         const deltaY = touch.clientY - startY;
 

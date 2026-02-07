@@ -266,9 +266,11 @@ export class MapSvg {
                 <div style="padding: 20px; color: red; border: 2px solid red; margin: 20px;">
                     <h2>🚨 SVG Loading Failed</h2>
                     <p>Could not load map SVG. Please check the console for details.</p>
-                    <pre>${err}</pre>
+                    <pre></pre>
                 </div>
             `;
+      const pre = this.container.querySelector('pre');
+      if (pre) pre.textContent = String(err);
       return;
     }
 
@@ -605,9 +607,10 @@ export class MapSvg {
 
   private handlePointerDown(event: PointerEvent): void {
     // Track all pointers (no isPrimary filter — needed for multi-touch)
-    if (event.button !== 0) return;
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
 
     this.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    this.container.setPointerCapture(event.pointerId);
 
     if (this.pointers.size === 1) {
       // Single pointer: prepare for drag
@@ -680,7 +683,6 @@ export class MapSvg {
     if (!this.isDragging) {
       this.isDragging = true;
       this.container.style.cursor = 'grabbing';
-      this.container.setPointerCapture(event.pointerId);
     }
 
     // Compute new viewBox from drag start (cumulative, not incremental)
@@ -703,6 +705,11 @@ export class MapSvg {
   private handlePointerUp(event: PointerEvent): void {
     if (!this.pointers.has(event.pointerId)) return;
 
+    try {
+      this.container.releasePointerCapture(event.pointerId);
+    } catch {
+      /* already released */
+    }
     this.pointers.delete(event.pointerId);
 
     if (this.isPinching) {
@@ -720,6 +727,7 @@ export class MapSvg {
     if (this.pointers.size === 0) {
       // All pointers gone: reset state
       this.isDragging = false;
+      this.wasPinching = false;
       this.dragStartScreenPos = null;
       this.dragStartViewBox = null;
       this.container.style.cursor = 'grab';
