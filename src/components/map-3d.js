@@ -253,6 +253,7 @@ export class Map3D {
     this.isDragging = false;
     this.wasDragging = false;
     this.dragStartX = null;
+    this.dragStartY = null;
     this.previousX = null;
     this.autoRotateWasEnabled = false;
     this._boundPointerDown = null;
@@ -587,6 +588,7 @@ export class Map3D {
     if (!event.isPrimary || event.button !== 0) return;
 
     this.dragStartX = event.clientX;
+    this.dragStartY = event.clientY;
     this.previousX = event.clientX;
     this.isDragging = false;
     this.autoRotateWasEnabled = this.autoRotate;
@@ -597,9 +599,10 @@ export class Map3D {
     if (!event.isPrimary || this.dragStartX === null) return;
 
     const totalDeltaX = event.clientX - this.dragStartX;
+    const totalDeltaY = event.clientY - this.dragStartY;
 
-    // Check drag threshold
-    if (!this.isDragging && Math.abs(totalDeltaX) <= DRAG_THRESHOLD) return;
+    // Check drag threshold (2D distance so vertical drags also activate drag mode)
+    if (!this.isDragging && Math.hypot(totalDeltaX, totalDeltaY) <= DRAG_THRESHOLD) return;
 
     if (!this.isDragging) {
       this.isDragging = true;
@@ -630,6 +633,7 @@ export class Map3D {
     // Reset drag state
     this.isDragging = false;
     this.dragStartX = null;
+    this.dragStartY = null;
     this.previousX = null;
     this.container.style.cursor = '';
   }

@@ -1,112 +1,107 @@
-# Tasks: Drag/Touch Pan Behavior for 2D Zoom and 3D Globe Rotation
+# Tasks: Drag Pan & Rotate Behavior
 
 **Input**: Design documents from `/specs/010-drag-pan-behavior/`
 **Prerequisites**: plan.md (required), spec.md (required), research.md, quickstart.md
 
-**Tests**: Included — the feature spec requires Enterprise Testing Standards (Constitution Principle III) and the plan explicitly defines test files and test strategy.
+**Tests**: Included — Enterprise Testing Standards (Constitution Principle III) require test coverage for new math functions. Plan defines explicit test strategy.
 
 **Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
 
 ## Format: `[ID] [P?] [Story] Description`
 
 - **[P]**: Can run in parallel (different files, no dependencies)
-- **[Story]**: Which user story this task belongs to (e.g., US1, US2, US3)
+- **[Story]**: Which user story this task belongs to (e.g., US1, US2, US3, US4)
 - Include exact file paths in descriptions
 
 ---
 
 ## Phase 1: Setup (Shared Infrastructure)
 
-**Purpose**: CSS infrastructure and shared constants needed by both map components
+**Purpose**: Remove obsolete drag-zoom code and prepare for new drag-pan implementation
 
-- [x] T001 Add `touch-action: none` and `cursor: grab` CSS rules for map containers in `src/styles/app.css`. Both `#map-container` (2D) and the 3D canvas container need `touch-action: none` to prevent default browser touch gestures, and `cursor: grab` for drag affordance. Add `cursor: grabbing` rule for active drag state (applied via JS class toggle or inline style).
+- [x] T001 Remove the `computeDragZoomedViewBox()` export function and the `DRAG_ZOOM_SENSITIVITY` constant from `src/components/map-svg.ts`. These are being replaced by the new `computeDragPannedViewBox()` function. Keep `computeZoomedViewBox()` (scroll-wheel zoom) and all other exports intact.
+- [x] T002 Delete the obsolete test file `tests/drag-zoom-2d.test.ts`. This file tests the removed `computeDragZoomedViewBox()` function. It will be replaced by `tests/drag-pan-2d.test.ts` in Phase 3.
+
+**Checkpoint**: Obsolete drag-zoom code removed. Existing scroll-wheel zoom and drag-rotate code untouched.
 
 ---
 
 ## Phase 2: Foundational (Blocking Prerequisites)
 
-**Purpose**: Test infrastructure — write tests first, ensure they fail, then implement
+**Purpose**: Implement the new pure math function for 2D pan — this is the core building block for User Story 1
 
-**⚠️ CRITICAL**: Tests must be written and failing before implementation begins
+**⚠️ CRITICAL**: The pure function must be implemented and tested before handler integration
 
-- [x] T002 [P] Create `tests/drag-zoom-2d.test.ts` with unit tests for the `computeDragZoomedViewBox()` pure function. Import from `../src/components/map-svg.js`. Tests must cover: (1) drag up (negative deltaY) → zoom in (smaller viewBox), (2) drag down (positive deltaY) → zoom out (larger viewBox), (3) zero deltaY → no viewBox change, (4) anchor point stays stationary through zoom (cursor-relative), (5) zoom clamping at MIN_VIEWBOX_WIDTH (60) and MAX_VIEWBOX_WIDTH (960), (6) proportionality — larger drag = more zoom, (7) aspect ratio preservation (w/h ratio constant), (8) symmetry — dragging 100px up then 100px back returns to original, (9) edge case: anchor at map corner (0,0), (10) edge case: anchor at map center (480,300). Follow the pattern in `tests/scroll-zoom-2d.test.ts` — use `describe`/`it`/`expect` from vitest, `ViewBoxRect` type, `DEFAULT_VIEWBOX = { x: 0, y: 0, w: 960, h: 600 }`.
-- [x] T003 [P] Create `tests/drag-rotate-3d.test.ts` with unit tests for the `computeDragRotationDelta()` pure function. Import from `../src/components/map-3d.js`. Tests must cover: (1) drag left (negative deltaX) → positive rotation (globe turns left), (2) drag right (positive deltaX) → negative rotation (globe turns right), (3) zero deltaX → zero rotation, (4) proportionality — larger deltaX = larger rotation, (5) opposite directions produce equal and opposite deltas, (6) sensitivity validation — DRAG_ROTATION_SENSITIVITY = 0.005 rad/pixel, (7) full-width drag (~300px) achieves ~1.5 rad, (8) linearity — delta is strictly proportional to input. Follow the pattern in `tests/scroll-rotate-3d.test.ts`.
-- [x] T004 Run tests: `npx vitest run tests/drag-zoom-2d.test.ts tests/drag-rotate-3d.test.ts` — confirm all tests FAIL (functions not yet implemented). This validates the test-first approach.
+- [x] T003 Implement `computeDragPannedViewBox()` pure function in `src/components/map-svg.ts`. Signature: `export function computeDragPannedViewBox(startViewBox: ViewBoxRect, screenDelta: { dx: number; dy: number }, containerSize: { width: number; height: number }): ViewBoxRect`. Algorithm: (1) Convert screen delta to SVG delta: `svgDeltaX = screenDelta.dx * (startViewBox.w / containerSize.width)`, `svgDeltaY = screenDelta.dy * (startViewBox.h / containerSize.height)`. (2) Translate origin: `newX = startViewBox.x - svgDeltaX`, `newY = startViewBox.y - svgDeltaY`. (3) Clamp: `newX = Math.max(0, Math.min(MAP_WIDTH - startViewBox.w, newX))`, `newY = Math.max(0, Math.min(MAP_HEIGHT - startViewBox.h, newY))`. (4) Return `{ x: newX, y: newY, w: startViewBox.w, h: startViewBox.h }`. Width and height are unchanged — pan does not zoom.
+- [x] T004 Create `tests/drag-pan-2d.test.ts` with unit tests for `computeDragPannedViewBox()`. Import from `../src/components/map-svg.js`. Tests must cover: (1) dragging left (negative dx) moves viewBox origin right, (2) dragging right (positive dx) moves viewBox origin left, (3) dragging up (negative dy) moves viewBox origin down, (4) dragging down (positive dy) moves viewBox origin up, (5) zero delta produces no change, (6) pan amount is proportional to drag distance, (7) pan scales with zoom level — smaller viewBox = less SVG movement per pixel, (8) diagonal drag moves both x and y, (9) clamping: x cannot go below 0, (10) clamping: x cannot exceed MAP_WIDTH - viewBox.w, (11) clamping: y cannot go below 0, (12) clamping: y cannot exceed MAP_HEIGHT - viewBox.h, (13) fully zoomed out (viewBox.w === 960, viewBox.h === 600): pan has no effect — clamped to (0,0), (14) width and height are never modified by pan, (15) reversibility: dragging left then right same amount returns to start. Use constants `MAP_WIDTH = 960`, `MAP_HEIGHT = 600`, `DEFAULT_VIEWBOX = { x: 0, y: 0, w: 960, h: 600 }`. Follow existing test patterns from `tests/scroll-zoom-2d.test.ts`.
+- [x] T005 Run tests: `npx vitest run tests/drag-pan-2d.test.ts` — all pan math tests must pass. Then run `npm test` to confirm no regressions.
 
-**Checkpoint**: Test infrastructure ready. All tests written and failing. Implementation can begin.
+**Checkpoint**: Pure pan function implemented and tested. Foundation ready for handler integration.
 
 ---
 
-## Phase 3: User Story 1 — Drag-to-Zoom on 2D Map (Priority: P1) 🎯 MVP
+## Phase 3: User Story 1 — Drag to Pan the 2D Map (Priority: P1) 🎯 MVP
 
-**Goal**: Users can click-and-drag (or touch-and-drag) vertically on the 2D SVG map to zoom in/out, centered on the initial press point.
+**Goal**: Replace drag-to-zoom with drag-to-pan on the 2D SVG map. Users can press and drag in any direction to slide the visible map area, Google Maps-style.
 
-**Independent Test**: Click/tap and drag vertically on the 2D map. Drag up zooms in, drag down zooms out. Release stops zoom at current level. Short clicks still select regions/offices.
+**Independent Test**: Zoom into the 2D map via scroll wheel, then press and drag in any direction. The map slides with the cursor. Drag to map edge — pan stops at boundary. Release — map stays at panned position. Short click on region — still selects.
 
 ### Implementation for User Story 1
 
-- [x] T005 [US1] Implement `computeDragZoomedViewBox()` pure function in `src/components/map-svg.ts`. Takes `startViewBox: ViewBoxRect`, `anchorSVG: { x: number; y: number }`, and `dragDeltaY: number`. Returns new `ViewBoxRect`. Logic: factor = Math.pow(1.005, dragDeltaY); newW = startViewBox.w _ factor; newH = startViewBox.h _ factor; newX = anchorSVG.x - (anchorSVG.x - startViewBox.x) _ (newW / startViewBox.w); newY = anchorSVG.y - (anchorSVG.y - startViewBox.y) _ (newH / startViewBox.h). Clamp newW to [MIN_VIEWBOX_WIDTH, MAX_VIEWBOX_WIDTH] range, newH proportionally. Export the function for testing. Add `DRAG_THRESHOLD = 5` and `DRAG_ZOOM_SENSITIVITY = 1.005` constants.
-- [x] T006 [US1] Add drag state properties to `MapSvg` class in `src/components/map-svg.ts`: `private isDragging: boolean = false`, `private wasDragging: boolean = false`, `private dragStartY: number | null = null`, `private dragStartViewBox: ViewBoxRect | null = null`, `private dragAnchorSVG: { x: number; y: number } | null = null`, `private boundPointerDown`, `private boundPointerMove`, `private boundPointerUp`. Initialize bound handler references in constructor or init.
-- [x] T007 [US1] Implement `handlePointerDown(event: PointerEvent)` method in `MapSvg` class in `src/components/map-svg.ts`. Steps: (1) guard `if (!event.isPrimary || event.button !== 0) return`, (2) store `dragStartY = event.clientY`, (3) snapshot `dragStartViewBox = { ...this.currentViewBox }`, (4) compute dragAnchorSVG using `svgElement.createSVGPoint()` + `getScreenCTM().inverse()` from event.clientX/clientY, (5) set `isDragging = false`, (6) call `this.container.setPointerCapture(event.pointerId)`, (7) cancel any in-progress `animateViewBox()` via `cancelAnimationFrame(this.viewBoxAnimationId)`.
-- [x] T008 [US1] Implement `handlePointerMove(event: PointerEvent)` method in `MapSvg` class in `src/components/map-svg.ts`. Steps: (1) guard `if (!event.isPrimary || this.dragStartY === null) return`, (2) compute `deltaY = event.clientY - this.dragStartY`, (3) if not yet dragging and `Math.abs(deltaY) <= DRAG_THRESHOLD` return early, (4) if threshold crossed set `isDragging = true`, (5) call `computeDragZoomedViewBox(this.dragStartViewBox, this.dragAnchorSVG, deltaY)`, (6) apply result to SVG viewBox via `setAttribute('viewBox', ...)`, (7) update `this.currentViewBox` with the result.
-- [x] T009 [US1] Implement `handlePointerUp(event: PointerEvent)` method in `MapSvg` class in `src/components/map-svg.ts`. Steps: (1) guard `if (!event.isPrimary) return`, (2) if `isDragging` was true set `wasDragging = true` (for click suppression), (3) reset drag state: `isDragging = false`, `dragStartY = null`, `dragStartViewBox = null`, `dragAnchorSVG = null`. Pointer capture is released automatically by the browser on pointerup.
-- [x] T010 [US1] Implement click suppression in `MapSvg` to prevent region/marker selection after a drag gesture. Add a click handler on `this.container` that checks `if (this.wasDragging) { this.wasDragging = false; event.stopPropagation(); event.preventDefault(); return; }`. This ensures that the synthetic `click` event fired after a pointerdown→pointermove→pointerup drag sequence does not trigger `selectRegion()` or `selectOffice()`. Register this handler during init with `{ capture: true }` so it fires before the region/marker click handlers.
-- [x] T011 [US1] Register pointer event listeners on `this.container` during `MapSvg.init()` in `src/components/map-svg.ts`. Register `pointerdown`, `pointermove` (with `{ passive: false }`), `pointerup`, and `pointercancel` (same handler as pointerup). Store bound handler references for cleanup. Add `removeEventListener` for all four in the dispose/cleanup path.
-- [x] T012 [US1] Run tests: `npx vitest run tests/drag-zoom-2d.test.ts` — all drag-zoom math tests must pass. Then run `npm test` to confirm no regressions in existing 341+ tests.
+- [x] T006 [US1] Update drag state properties in the `MapSvg` class in `src/components/map-svg.ts`. Remove: `private dragStartY: number | null = null` and `private dragAnchorSVG: { x: number; y: number } | null = null`. Add: `private dragStartScreenPos: { x: number; y: number } | null = null`. Keep: `isDragging`, `wasDragging`, `dragStartViewBox`, and all bound handler references.
+- [x] T007 [US1] Rewrite `handlePointerDown(event: PointerEvent)` in `MapSvg` class in `src/components/map-svg.ts`. Steps: (1) guard `if (!event.isPrimary || event.button !== 0) return`, (2) store `this.dragStartScreenPos = { x: event.clientX, y: event.clientY }`, (3) snapshot `this.dragStartViewBox = { ...this.currentViewBox }`, (4) set `this.isDragging = false`, (5) call `this.container.setPointerCapture(event.pointerId)`, (6) cancel any in-progress viewBox animation. Remove the SVG anchor point computation (no longer needed for pan).
+- [x] T008 [US1] Rewrite `handlePointerMove(event: PointerEvent)` in `MapSvg` class in `src/components/map-svg.ts`. Steps: (1) guard `if (!event.isPrimary || this.dragStartScreenPos === null) return`, (2) guard `if (!this.dragStartViewBox) return`, (3) compute `deltaX = event.clientX - this.dragStartScreenPos.x` and `deltaY = event.clientY - this.dragStartScreenPos.y`, (4) threshold check: `if (!this.isDragging && Math.hypot(deltaX, deltaY) <= DRAG_THRESHOLD) return`, (5) if not yet dragging: set `this.isDragging = true` and `this.container.style.cursor = 'grabbing'`, (6) compute: `const newViewBox = computeDragPannedViewBox(this.dragStartViewBox, { dx: deltaX, dy: deltaY }, { width: this.container.clientWidth, height: this.container.clientHeight })`, (7) apply: `this.currentViewBox = newViewBox` and `this.svgElement.setAttribute('viewBox', ...)`.
+- [x] T009 [US1] Update `handlePointerUp(event: PointerEvent)` in `MapSvg` class in `src/components/map-svg.ts`. Steps: (1) guard `if (!event.isPrimary) return`, (2) if `this.isDragging` was true: set `this.wasDragging = true`, (3) reset: `this.isDragging = false`, `this.dragStartScreenPos = null`, `this.dragStartViewBox = null`, `this.container.style.cursor = 'grab'`.
+- [x] T010 [US1] Update the comment on line 30-32 of `src/components/map-svg.ts` to change "Drag-zoom constants" to "Drag-pan constants" and remove any reference to `DRAG_ZOOM_SENSITIVITY`. Update the comment on line 125 referencing "Drag-zoom state" to "Drag-pan state".
+- [x] T011 [US1] Run tests: `npx vitest run tests/drag-pan-2d.test.ts` — all tests must pass. Then run `npm test` to confirm no regressions across the full suite.
 
-**Checkpoint**: 2D drag-to-zoom fully functional. Short clicks still trigger selection. Touch input works via Pointer Events. Scroll-wheel zoom from feature 009 continues to work.
+**Checkpoint**: 2D drag-to-pan fully functional. Scroll-wheel zoom still works. Short clicks still select regions/offices. No drag-to-zoom behavior remains.
 
 ---
 
-## Phase 4: User Story 2 — Drag-to-Rotate on 3D Globe (Priority: P1)
+## Phase 4: User Story 2 — Drag to Rotate the 3D Globe Horizontally (Priority: P1)
 
-**Goal**: Users can click-and-drag (or touch-and-drag) horizontally on the 3D globe to rotate it left/right, with auto-rotation pausing during drag and resuming on release.
+**Goal**: Ensure the 3D globe drag-rotate responds only to horizontal drag movement. Vertical drag is ignored for rotation but still activates drag mode for click suppression.
 
-**Independent Test**: Click/tap and drag horizontally on the 3D globe. Drag left rotates left, drag right rotates right. Release resumes auto-rotation (if it was on). Short clicks still select regions/offices.
+**Independent Test**: Press and drag left/right on the 3D globe — globe rotates horizontally. Drag up/down — globe does NOT rotate. Drag diagonally — only horizontal component causes rotation. Short click still selects.
 
 ### Implementation for User Story 2
 
-- [x] T013 [P] [US2] Implement `computeDragRotationDelta()` pure function in `src/components/map-3d.js`. Takes `deltaX: number`. Returns `number` (radians). Logic: `return -deltaX * DRAG_ROTATION_SENSITIVITY`. Negative sign: drag left (negative deltaX) → positive rotation (globe turns left, matching Three.js Y-axis convention). Add `const DRAG_ROTATION_SENSITIVITY = 0.005` and `const DRAG_THRESHOLD = 5` constants. Export the function for testing.
-- [x] T014 [US2] Add drag state properties to `Map3D` class in `src/components/map-3d.js`: `this.isDragging = false`, `this.wasDragging = false`, `this.dragStartX = null`, `this.previousX = null`, `this.autoRotateWasEnabled = false`, `this._boundPointerDown`, `this._boundPointerMove`, `this._boundPointerUp`, `this._boundPointerCancel`. Initialize in constructor alongside existing bound handlers.
-- [x] T015 [US2] Implement `handlePointerDown(event)` method in `Map3D` class in `src/components/map-3d.js`. Steps: (1) guard `if (!event.isPrimary || event.button !== 0) return`, (2) store `this.dragStartX = event.clientX` and `this.previousX = event.clientX`, (3) set `this.isDragging = false`, (4) store `this.autoRotateWasEnabled = this.autoRotate`, (5) call `this.container.setPointerCapture(event.pointerId)`.
-- [x] T016 [US2] Implement `handlePointerMove(event)` method in `Map3D` class in `src/components/map-3d.js`. Steps: (1) guard `if (!event.isPrimary || this.dragStartX === null) return`, (2) compute `totalDeltaX = event.clientX - this.dragStartX`, (3) if not yet dragging and `Math.abs(totalDeltaX) <= DRAG_THRESHOLD` return early, (4) if threshold just crossed set `this.isDragging = true` and `this.autoRotate = false`, (5) compute `incrementalDeltaX = event.clientX - this.previousX`, (6) update `this.previousX = event.clientX`, (7) apply `this.globeGroup.rotation.y += computeDragRotationDelta(incrementalDeltaX)`.
-- [x] T017 [US2] Implement `handlePointerUp(event)` method in `Map3D` class in `src/components/map-3d.js`. Steps: (1) guard `if (!event.isPrimary) return`, (2) if `this.isDragging` was true: set `this.wasDragging = true`, and if `this.autoRotateWasEnabled && this.userWantsAutoRotate` then `this.autoRotate = true` (resume auto-rotation only if user still wants it), (3) reset drag state: `this.isDragging = false`, `this.dragStartX = null`, `this.previousX = null`.
-- [x] T018 [US2] Implement click suppression in `Map3D` by adding a guard at the top of the existing `onClick(event)` method in `src/components/map-3d.js`. Add: `if (this.wasDragging) { this.wasDragging = false; return; }` before the existing `if (!this.hoveredMesh) return` check. This prevents region/marker selection after a drag gesture.
-- [x] T019 [US2] Register pointer event listeners on `this.container` during `Map3D.setupEventListeners()` in `src/components/map-3d.js`. Register `pointerdown`, `pointermove` (with `{ passive: false }`), `pointerup`, and `pointercancel` (same handler as pointerup). Store bound handler references. Add `removeEventListener` for all four in the `dispose()` method alongside existing listener cleanup.
-- [x] T020 [US2] Run tests: `npx vitest run tests/drag-rotate-3d.test.ts` — all drag-rotation math tests must pass. Then run `npm test` to confirm no regressions in existing 341+ tests.
+- [x] T012 [US2] Add `dragStartY` property to the `Map3D` class constructor in `src/components/map-3d.js`. Add `this.dragStartY = null` alongside the existing `this.dragStartX = null`.
+- [x] T013 [US2] Update `handlePointerDown(event)` in `Map3D` class in `src/components/map-3d.js`. Add: `this.dragStartY = event.clientY` alongside the existing `this.dragStartX = event.clientX` assignment (line 589).
+- [x] T014 [US2] Update `handlePointerMove(event)` in `Map3D` class in `src/components/map-3d.js`. Change the threshold check from `if (!this.isDragging && Math.abs(totalDeltaX) <= DRAG_THRESHOLD) return` to: compute `const totalDeltaY = event.clientY - this.dragStartY` then `if (!this.isDragging && Math.hypot(totalDeltaX, totalDeltaY) <= DRAG_THRESHOLD) return`. Keep the rotation computation unchanged — only the horizontal `incrementalDeltaX` is used for `computeDragRotationDelta()`.
+- [x] T015 [US2] Update `handlePointerUp(event)` in `Map3D` class in `src/components/map-3d.js`. Add cleanup: `this.dragStartY = null` alongside the existing `this.dragStartX = null` reset (line 632).
+- [x] T016 [US2] Add a named test to `tests/drag-rotate-3d.test.ts` confirming vertical-only drag produces zero rotation. Add test: `it('vertical-only drag (deltaX = 0) produces zero rotation — globe does not respond to vertical movement', () => { expect(computeDragRotationDelta(0)).toBe(0); })`. This makes the horizontal-only behavior explicitly tested with a descriptive name.
+- [x] T017 [US2] Run tests: `npx vitest run tests/drag-rotate-3d.test.ts` — all tests must pass including the new vertical-drag test. Then run `npm test` to confirm no regressions.
 
-**Checkpoint**: 3D drag-to-rotate fully functional. Auto-rotation pause/resume works. Short clicks still trigger selection. Touch input works via Pointer Events. Scroll-wheel rotation from feature 009 continues to work.
+**Checkpoint**: 3D globe drag-rotate confirmed horizontal-only. Vertical drags activate drag mode but produce zero rotation. Auto-rotation pause/resume still works. Scroll-wheel rotation still works.
 
 ---
 
-## Phase 5: User Story 3 — Drag Gesture Does Not Conflict with Existing Interactions (Priority: P2)
+## Phase 5: User Story 3 + User Story 4 — Click Suppression & Drag-Zoom Removal Validation (Priority: P2)
 
-**Goal**: Verify and ensure that drag behavior does not break click-to-select, keyboard navigation, scroll-wheel interactions, or page scrolling outside the map.
+**Goal**: Validate that drag gestures don't trigger click actions (US3) and that no drag-to-zoom behavior remains on the 2D map (US4). Both stories are validated together since they are cross-cutting.
 
-**Independent Test**: Click regions/markers without dragging — selection fires. Drag on maps — zoom/rotation works without selection. Scroll outside maps — page scrolls normally. Use keyboard Tab/Enter/Esc — navigation works.
+**Independent Test**: Press on a region, drag past threshold, release — region is NOT selected. Short click on same region — region IS selected. Drag vertically on 2D map — map pans, does NOT zoom. Scroll wheel — still zooms.
 
-> **Note**: Most of US3's behavior is already implemented as part of US1 and US2 (click suppression via `wasDragging` flag, pointer capture, `touch-action: none`). This phase validates the cross-cutting behavior and ensures edge cases are handled.
+- [x] T018 [US3] Verify click suppression on 2D map: with `npm run dev` running, zoom into the 2D map (scroll wheel), click a region with a short click — must select. Then drag past 5px on the same region — must NOT select on release. Confirm `wasDragging` flag and capture-phase click handler are working correctly.
+- [x] T019 [US3] Verify click suppression on 3D globe: switch to 3D view, click a region halo with a short click — must select. Then drag horizontally past 5px on a halo — must NOT select on release. Drag vertically past 5px on a halo — must NOT select on release (hypot threshold catches vertical drags).
+- [x] T020 [US4] Verify drag-to-zoom is fully removed: on the 2D map, press and drag vertically — the map must pan vertically, NOT zoom in or out. Confirm the viewBox width/height do not change during any drag gesture. Only the scroll wheel should zoom.
+- [x] T021 [US4] Verify scroll-wheel zoom still works: on the 2D map, scroll up — must zoom in. Scroll down — must zoom out. Zoom is cursor-relative. Pan after zooming — pan works within zoomed boundaries.
+- [x] T022 Run full verification: `npm test` — all tests pass. `npm run lint` — no warnings. `npm run typecheck` — no errors. `npm run build` — builds successfully.
 
-- [x] T021 [US3] Verify click-to-select still works on 2D map: with `npm run dev` running, load the app in the browser, click on a region (short click, no drag) — region must highlight and zoom. Click on an office marker — office details must appear. Document any issues found. _(Validated by design: `wasDragging` flag only set when drag threshold exceeded. Requires manual browser verification.)_
-- [x] T022 [US3] Verify click-to-select still works on 3D globe: switch to 3D view, click on a region halo — region must select. Click on an office marker — office modal must appear. Document any issues found. _(Validated by design: `wasDragging` guard in onClick prevents false positives. Requires manual browser verification.)_
-- [x] T023 [US3] Verify drag-beyond-boundary behavior: on both maps, start a drag inside the map container and move the pointer outside the container boundary. The drag must continue working (pointer capture). Release the pointer outside — drag must end cleanly. Document any issues found. _(Validated by design: setPointerCapture redirects events. Requires manual browser verification.)_
-- [x] T024 [US3] Verify coexistence with scroll-wheel: on 2D map, alternate between scroll-wheel zoom and drag-zoom. Both must work independently. On 3D globe, alternate between scroll-wheel rotation and drag-rotation. Both must work. Document any issues found.
-- [x] T025 [US3] Verify right-click and multi-touch rejection: on both maps, right-click and drag — must be ignored (no zoom/rotation). On a touch device, use two fingers — only the first finger should control drag. Document any issues found. _(Validated by design: `event.isPrimary` and `event.button === 0` guards. Requires manual verification.)_
-- [x] T026 [US3] Run full verification: `npm run verify` (typecheck + lint + format:check + test:ci) — all checks must pass. Then `npm run build` — must build successfully.
-
-**Checkpoint**: All interactions verified — drag, click, scroll-wheel, keyboard, touch all work correctly together.
+**Checkpoint**: All behaviors verified. Click suppression works. Drag-to-zoom fully removed. All existing interactions intact.
 
 ---
 
 ## Phase 6: Polish & Cross-Cutting Concerns
 
-**Purpose**: Final validation, cursor feedback, and cleanup
+**Purpose**: Final cleanup and cross-browser validation
 
-- [x] T027 Add cursor feedback: in `src/components/map-svg.ts`, set `this.container.style.cursor = 'grabbing'` when `isDragging` becomes true in `handlePointerMove`, and restore `this.container.style.cursor = 'grab'` in `handlePointerUp`. Apply same pattern in `src/components/map-3d.js`. Ensure the `cursor: grab` default from T001 CSS is not overridden when not dragging.
-- [x] T028 Run full test suite: `npm test` — all existing 341+ tests plus new drag tests must pass.
-- [x] T029 Run type check: `npm run typecheck` — must pass with no errors.
-- [x] T030 Run lint: `npm run lint` — must pass with no warnings.
-- [x] T031 Manual cross-browser check: test drag behavior in Chrome and Firefox (at minimum). Verify consistent zoom and rotation behavior on desktop. If a touch device is available, verify touch drag works identically. Document any browser-specific quirks. _(Requires user manual testing.)_
+- [x] T023 [P] Review and clean up any remaining comments in `src/components/map-svg.ts` that reference "drag-zoom" or "zoom" in the context of drag behavior. Update to reference "drag-pan" or "pan" as appropriate. Do not change comments about scroll-wheel zoom.
+- [x] T024 [P] Review and clean up any remaining comments in `src/components/map-3d.js` that reference drag behavior. Ensure comments accurately describe horizontal-only rotation.
+- [ ] T025 Manual cross-browser check: test drag-pan on 2D and drag-rotate on 3D in Chrome and Firefox (at minimum). Verify: (1) pan follows cursor 1:1 at various zoom levels, (2) pan stops at boundaries, (3) globe rotates only horizontally, (4) touch input works on a mobile device (if available). Document any browser-specific quirks.
+- [x] T026 Run final full suite: `npm test && npm run lint && npm run typecheck && npm run build` — all must pass cleanly.
 
 ---
 
@@ -115,47 +110,47 @@
 ### Phase Dependencies
 
 - **Setup (Phase 1)**: No dependencies — can start immediately
-- **Foundational (Phase 2)**: No hard dependency on Phase 1 (tests don't need CSS). Can run in parallel with Phase 1.
-- **User Story 1 (Phase 3)**: Depends on Phase 1 (CSS) and Phase 2 (tests written)
-- **User Story 2 (Phase 4)**: Depends on Phase 1 (CSS) and Phase 2 (tests written). Independent of US1 — can run in parallel with Phase 3.
-- **User Story 3 (Phase 5)**: Depends on Phase 3 and Phase 4 completion (validates cross-cutting behavior)
+- **Foundational (Phase 2)**: No hard dependency on Phase 1. Can run in parallel with Phase 1.
+- **User Story 1 (Phase 3)**: Depends on Phase 1 (drag-zoom removed) and Phase 2 (pan function implemented)
+- **User Story 2 (Phase 4)**: Depends only on Phase 2 completion. Independent of US1 — can run in parallel with Phase 3.
+- **User Story 3+4 (Phase 5)**: Depends on Phase 3 and Phase 4 completion (validates cross-cutting behavior)
 - **Polish (Phase 6)**: Depends on all user stories being complete
 
 ### User Story Dependencies
 
 - **User Story 1 (P1)**: Independent — only modifies `src/components/map-svg.ts`
-- **User Story 2 (P1)**: Independent — only modifies `src/components/map-3d.js`
-- **User Story 3 (P2)**: Depends on US1 + US2 — validates interactions between all features
+- **User Story 2 (P1)**: Independent — only modifies `src/components/map-3d.js` and `tests/drag-rotate-3d.test.ts`
+- **User Story 3 (P2)**: Depends on US1 + US2 — validates click suppression across both maps
+- **User Story 4 (P2)**: Depends on US1 — validates drag-zoom removal
 
 ### Within Each User Story
 
-- Pure function implementation first (testable math)
-- State properties second
-- Event handlers third (pointerdown → pointermove → pointerup)
-- Click suppression fourth
-- Event registration and cleanup fifth
+- State property changes first
+- Event handler rewrites second (pointerdown → pointermove → pointerup)
+- Comment cleanup third
 - Test verification last
 
 ### Parallel Opportunities
 
-- T002 and T003 can run in parallel (different test files)
-- T005-T012 (US1) and T013-T020 (US2) can run in parallel (different source files: map-svg.ts vs map-3d.js)
-- T013 is marked [P] — can run in parallel with US1 tasks since it modifies a different file
+- T001 and T002 can run in parallel (different files)
+- T003 and T004 can run in parallel (source file vs test file)
+- Phase 3 (US1) and Phase 4 (US2) can run in parallel (map-svg.ts vs map-3d.js — completely different files)
+- T023 and T024 can run in parallel (different files)
 
 ---
 
 ## Parallel Example: User Story 1 + User Story 2
 
 ```text
-# With two developers, after Phase 2 tests are written:
+# After Phase 2 foundation is complete:
 
-Developer A (2D map):
-  T005 → T006 → T007 → T008 → T009 → T010 → T011 → T012
+Developer A (2D map — src/components/map-svg.ts):
+  T006 → T007 → T008 → T009 → T010 → T011
 
-Developer B (3D globe):
-  T013 → T014 → T015 → T016 → T017 → T018 → T019 → T020
+Developer B (3D globe — src/components/map-3d.js):
+  T012 → T013 → T014 → T015 → T016 → T017
 
-# Both complete → Phase 5 (US3 validation) → Phase 6 (Polish)
+# Both complete → Phase 5 (validation) → Phase 6 (polish)
 ```
 
 ---
@@ -164,29 +159,19 @@ Developer B (3D globe):
 
 ### MVP First (User Story 1 Only)
 
-1. Complete Phase 1: CSS setup (T001)
-2. Complete Phase 2: Write tests (T002, T003, T004)
-3. Complete Phase 3: User Story 1 — 2D drag-zoom (T005-T012)
-4. **STOP and VALIDATE**: Drag-zoom works on 2D map, clicks still work, scroll-wheel still works
+1. Complete Phase 1: Remove drag-zoom code (T001, T002)
+2. Complete Phase 2: Implement and test pan function (T003, T004, T005)
+3. Complete Phase 3: User Story 1 — 2D drag-to-pan (T006-T011)
+4. **STOP and VALIDATE**: Pan works on 2D map, scroll-wheel zoom still works, clicks still work
 5. Demo if ready
 
 ### Incremental Delivery
 
-1. Complete Setup + Tests → Foundation ready
-2. Add User Story 1 (2D drag-zoom) → Test independently → Demo (MVP!)
-3. Add User Story 2 (3D drag-rotate) → Test independently → Demo
-4. Validate User Story 3 (cross-cutting) → Full regression test
-5. Polish (cursor feedback, final checks) → Feature complete
-
-### Parallel Strategy
-
-With two developers:
-
-1. Both start immediately:
-   - Developer A: Phase 1 (Setup) → Phase 3 (US1 — 2D Drag-Zoom)
-   - Developer B: Phase 2 (Tests) → Phase 4 (US2 — 3D Drag-Rotation)
-2. Both complete → Phase 5 (US3 validation together)
-3. Either developer → Phase 6 (Polish)
+1. Complete Setup + Foundational → Foundation ready
+2. Add User Story 1 (2D drag-to-pan) → Test independently → Demo (MVP!)
+3. Add User Story 2 (3D horizontal drag-rotate) → Test independently → Demo
+4. Validate User Story 3+4 (cross-cutting) → Full regression test
+5. Polish (comments, cross-browser) → Feature complete
 
 ---
 
@@ -194,8 +179,8 @@ With two developers:
 
 - [P] tasks = different files, no dependencies
 - [Story] label maps task to specific user story for traceability
-- US1 and US2 are both P1 but operate on completely different files — fully parallelizable
-- US3 is a validation phase, not an implementation phase — most behavior is built into US1 and US2
-- All tests are pure math/logic — no DOM, Pointer Events, or WebGL context required
+- US1 and US2 are both P1 and operate on completely different files — fully parallelizable
+- US3 and US4 are validation phases, not implementation phases — behavior is built into US1 and US2
+- All unit tests are pure math/logic — no DOM, Pointer Events, or WebGL context required
 - Commit after each task or logical group
 - Stop at any checkpoint to validate story independently

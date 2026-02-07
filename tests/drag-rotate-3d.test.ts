@@ -39,6 +39,13 @@ describe('computeDragRotationDelta', () => {
     expect(delta).toBe(0);
   });
 
+  it('vertical-only drag (deltaX = 0) produces zero rotation — globe does not respond to vertical movement', () => {
+    // Vertical drags pass deltaX=0 to computeDragRotationDelta, producing no rotation.
+    // The threshold check uses Math.hypot(dx, dy) so vertical drags still activate
+    // drag mode for click suppression, but only horizontal component causes rotation.
+    expect(computeDragRotationDelta(0)).toBe(0);
+  });
+
   // ────────────────────────────────────────────────
   // Proportionality
   // ────────────────────────────────────────────────

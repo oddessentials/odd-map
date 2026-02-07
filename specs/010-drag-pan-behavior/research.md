@@ -1,122 +1,60 @@
-# Research: Drag/Touch Pan Behavior for 2D Zoom and 3D Globe Rotation
+# Research: Drag Pan & Rotate Behavior
 
-**Feature**: 010-drag-pan-behavior
-**Date**: 2026-02-06
+**Feature Branch**: `010-drag-pan-behavior`
+**Date**: 2026-02-07
 
 ## Research Tasks
 
-### R1: Pointer Events API — Unified Mouse + Touch Input
+### RT-1: SVG ViewBox Pan Mechanics
 
-**Decision**: Use the Pointer Events API (`pointerdown`, `pointermove`, `pointerup`, `pointercancel`) instead of separate mouse and touch event listeners.
+**Task**: Determine the best approach for panning a zoomed SVG map by translating the viewBox.
 
-**Rationale**: Pointer Events provide a single, unified abstraction over mouse, touch, and stylus input. All modern browsers support them (Chrome 55+, Firefox 59+, Safari 13+, Edge 12+). Using Pointer Events eliminates the need for duplicate mouse/touch event handlers and avoids the 300ms touch delay that plagues older `click` event handling on mobile. Key advantages:
+**Decision**: Direct viewBox origin translation with screen-to-SVG coordinate scaling.
 
-- `event.isPrimary` easily filters to single-pointer only (handles multi-touch rejection for free)
-- `event.button === 0` filters to primary button (rejects right-click)
-- `event.pointerType` can distinguish "mouse", "touch", "pen" if needed (not required for this feature)
-- Pointer capture (`setPointerCapture`) provides clean drag-beyond-boundary handling
+**Rationale**: The SVG `viewBox` attribute controls the visible window into the SVG coordinate space. Panning is achieved by adjusting the origin (x, y) while keeping width and height constant. The conversion from screen pixels to SVG units is: `svgDelta = screenDelta * (viewBox.dimension / container.dimension)`. This approach is:
 
-**Alternatives considered**:
-
-- Separate `mousedown`/`touchstart` + `mousemove`/`touchmove` + `mouseup`/`touchend` (rejected): Requires duplicate code paths, introduces event ordering bugs (e.g., `touchstart` fires before synthetic `mousedown` on mobile), and doesn't provide pointer capture.
-- Only `mousedown`/`mousemove`/`mouseup` (rejected): Does not support touch devices at all, which is a hard requirement (FR-010).
-
-### R2: Click vs. Drag Discrimination — Threshold-Based Approach
-
-**Decision**: Use a 5-pixel Euclidean distance threshold to distinguish a click/tap from a drag gesture.
-
-**Rationale**: On `pointerdown`, record the starting position. On each `pointermove`, compute the distance from start. If the distance exceeds 5 pixels, enter "drag mode" and suppress the subsequent `click` event. The 5px threshold is:
-
-- **Small enough** that intentional drags are recognized almost immediately (first 5px of movement, typically <50ms at normal drag speed)
-- **Large enough** to absorb finger tremor on touchscreens (typical touch jitter is 2-3px) and minor mouse movement during a click
-- **Consistent with industry standards**: Google Maps uses ~3-5px, Leaflet uses 3px, macOS uses 5px for drag detection
-
-For the 2D map, only vertical distance (`Math.abs(deltaY)`) is checked since horizontal movement is irrelevant to zoom. For the 3D globe, only horizontal distance (`Math.abs(deltaX)`) is checked since vertical movement is irrelevant to rotation.
+- Zero-cost in terms of rendering — only an attribute string changes, no reflow or repaint of SVG paths
+- Naturally 1:1 with cursor movement at any zoom level (the scaling factor accounts for current zoom)
+- Consistent with how scroll-wheel zoom already manipulates the viewBox
 
 **Alternatives considered**:
 
-- Time-based threshold (e.g., 200ms hold = drag) (rejected): Adds perceived latency. Users expect drag response immediately on movement, not after a delay.
-- Combined distance + time (rejected): Over-engineered. Distance-only is simpler and matches user expectations across all platforms.
-- Zero-threshold with immediate drag (rejected): Any finger tremor would trigger drag mode, making it impossible to tap/click to select.
+- CSS transform translate on the SVG element: Would require tracking two coordinate systems and complicate scroll-wheel zoom interaction. Rejected.
+- SVG `transform` attribute on a root `<g>` element: Would conflict with existing viewBox manipulation for zoom. Rejected.
+- Modifying individual element positions: Completely impractical for a static SVG with hundreds of paths. Rejected.
 
-### R3: Pointer Capture for Drag Continuation Beyond Boundaries
+### RT-2: Pan Boundary Clamping Strategy
 
-**Decision**: Use `element.setPointerCapture(pointerId)` on `pointerdown` to ensure pointer events continue firing on the element even when the pointer moves outside its bounds.
+**Task**: Determine how to prevent the user from panning beyond the map edges.
 
-**Rationale**: During a drag, users frequently overshoot the map container boundary, especially on mobile where the map may not fill the full viewport. Without pointer capture, `pointermove` events would stop firing when the pointer leaves the element, causing the drag to "stick" in a broken state. `setPointerCapture`:
+**Decision**: Arithmetic origin clamping with `Math.max(0, Math.min(MAP_WIDTH - viewBox.w, x))`.
 
-- Redirects all subsequent `pointermove` and `pointerup` events to the capturing element
-- Automatically releases capture on `pointerup` (no manual cleanup needed)
-- Also fires `lostpointercapture` event if capture is broken by the browser (e.g., system gesture)
-- Well-supported: all browsers that support Pointer Events also support pointer capture
+**Rationale**: The viewBox origin (x, y) is clamped so the visible rectangle never extends outside [0, 0, MAP_WIDTH, MAP_HEIGHT]. When fully zoomed out, `MAP_WIDTH - viewBox.w === 0`, so x is clamped to 0, naturally disabling pan. This is simple, correct, and performant.
 
 **Alternatives considered**:
 
-- Listening on `document` for `mousemove`/`mouseup` (rejected): Doesn't work with Pointer Events without additional plumbing. Pointer capture is the idiomatic solution.
-- Clipping drag to container bounds and ignoring out-of-bounds (rejected): Poor UX — drag "stops" unexpectedly.
+- Using the existing `clampBounds()` utility: It clamps a bounding box (region bounds with padding), not a viewBox origin. The signature doesn't match the pan use case. Would require awkward adaptation. Rejected.
+- Elastic/rubber-band effect at boundaries: Adds complexity (animation, snap-back) for minimal UX benefit on a data map. Not requested. Rejected.
 
-### R4: 2D Drag-Zoom — Exponential Factor Mapping
+### RT-3: 3D Globe Drag Threshold with Vertical Component
 
-**Decision**: Map vertical drag distance to zoom factor using `Math.pow(1.005, deltaY)`, where `deltaY` is the pixel distance from the drag start (positive = down = zoom out, negative = up = zoom in).
+**Task**: Research whether the 3D globe's drag threshold should account for vertical movement.
 
-**Rationale**: An exponential mapping provides a natural zoom feel:
+**Decision**: Change threshold from `Math.abs(totalDeltaX)` to `Math.hypot(totalDeltaX, totalDeltaY)`.
 
-- **Symmetry**: Dragging 100px up then 100px back down returns to the original zoom (multiplicative inverse: `1.005^(-100) * 1.005^(100) = 1`)
-- **Proportional speed**: At high zoom levels, the same drag distance produces a smaller absolute change (fine control). At low zoom levels, the same drag distance produces a larger absolute change (coarse navigation). This matches user expectations for zoom controls.
-- **Sensitivity**: At 0.5% per pixel (base 1.005), a 100px drag achieves ~1.65x zoom. A 200px drag achieves ~2.72x zoom. A 500px drag (full vertical swipe on many screens) achieves ~12.2x zoom, comfortably covering the full MIN_VIEWBOX_WIDTH (60) to MAX_VIEWBOX_WIDTH (960) range (~16x).
-- **SC-001 compliance**: Full zoom range achievable in a single 500px drag (~1-2 seconds of movement), well within the 3-second target.
+**Rationale**: A user dragging vertically on the globe currently doesn't cross the threshold (since only X is measured). This means the `wasDragging` flag isn't set, and a vertical drag ending on a clickable element could trigger an unintended selection. By using the 2D distance (`Math.hypot`), any sufficiently large drag — horizontal, vertical, or diagonal — activates drag mode and suppresses the subsequent click. However, only the horizontal component is fed to `computeDragRotationDelta()`, so vertical-only drags produce zero rotation as specified.
 
 **Alternatives considered**:
 
-- Linear mapping (rejected): Zoom speed is constant regardless of current zoom level, which feels too fast at high zoom and too slow at low zoom.
-- Per-pixel discrete steps reusing `computeZoomedViewBox()` from scroll-wheel (rejected): This function was designed for discrete ±1 tick inputs. Calling it on every `pointermove` pixel would accumulate rounding errors and make the zoom feel jumpy. A single cumulative factor from drag start is smoother.
+- Keep horizontal-only threshold: Simpler, but creates an edge case where vertical drags don't suppress clicks. Rejected.
+- Use `Math.max(Math.abs(dx), Math.abs(dy))` (Chebyshev distance): Works but is less standard than Euclidean distance for drag detection. Rejected.
 
-### R5: 3D Drag-Rotation — Linear Pixel-to-Radian Mapping
+### RT-4: Interaction Between Pan and Scroll-Wheel Zoom
 
-**Decision**: Map horizontal drag distance to rotation using a linear factor: `deltaRadians = -deltaX * 0.005`. Negative sign because dragging left (negative deltaX) should rotate the globe left (positive Y rotation in Three.js).
+**Task**: Verify that pan and scroll-wheel zoom don't conflict.
 
-**Rationale**: Linear mapping is appropriate for rotation (unlike zoom) because:
+**Decision**: No special coordination needed — they are orthogonal operations.
 
-- **No scaling effect**: Rotation doesn't have the "compounding" property of zoom. Rotating 10° more always looks the same regardless of current rotation. Linear is the natural choice.
-- **Sensitivity**: At 0.005 rad/pixel, a 300px drag (roughly globe width in a typical viewport) achieves 1.5 rad (~86°). A 628px drag achieves π radians (180°). Full 360° requires ~1257px of cumulative drag, achievable with 2-3 back-and-forth sweeps.
-- **SC-002 compliance**: A single full-width drag across the globe area (~400-500px) covers ~2.0-2.5 rad (~115-143°). Multiple sweeps or faster drags achieve 360° comfortably.
-- **Incremental application**: Unlike 2D zoom (which computes from start), rotation applies incrementally (`event.clientX - previousX` per move event). This prevents the "snap" effect that would occur if rotation reset to an absolute value on each move.
+**Rationale**: Scroll-wheel zoom modifies all four viewBox values (x, y, w, h) using `computeZoomedViewBox()`. Drag-pan modifies only x and y. Both read from and write to `this.currentViewBox`. Since pointer events and wheel events don't fire simultaneously (different input devices), there's no race condition. When a drag starts, `dragStartViewBox` captures the current state including any zoom level, so the pan math correctly scales to whatever zoom level is active.
 
-**Alternatives considered**:
-
-- Exponential mapping (rejected): No benefit for rotation, would feel inconsistent.
-- Cumulative from start (rejected for 3D): Would cause visual jumps when the user reverses drag direction mid-gesture. Incremental application is smoother.
-
-### R6: Touch Scroll Prevention — `touch-action: none`
-
-**Decision**: Add `touch-action: none` CSS property on map container elements to prevent default browser touch behaviors (scrolling, pinch-zoom, etc.) within the map area.
-
-**Rationale**: On touch devices, browsers default to scrolling or zooming the page when the user touches and drags. The `touch-action: none` CSS property tells the browser to never claim the touch gesture for default behaviors within the element, allowing our Pointer Events handlers full control. This is more reliable than calling `event.preventDefault()` on every `pointermove` because:
-
-- It works at the compositor level (no JavaScript execution needed to prevent default behavior)
-- It avoids the "intervention" warnings Chrome shows when `preventDefault()` is called on passive touch events
-- It's set once (declarative) rather than per-event (imperative)
-
-The property only affects the map container — page scrolling outside the map continues normally.
-
-**Alternatives considered**:
-
-- `event.preventDefault()` on every `pointermove` with `{ passive: false }` (rejected as primary approach): Works but requires the browser to wait for JavaScript execution before deciding to scroll, which can cause scroll jank on older devices. Fine as a fallback but `touch-action` is the primary solution.
-- `touch-action: pan-y` on 2D map / `touch-action: pan-x` on 3D map (rejected): Would allow orthogonal scrolling, but since both maps use drag for their respective axes, any default touch behavior within the map area would conflict.
-
-### R7: Auto-Rotation Pause/Resume During 3D Drag
-
-**Decision**: Pause auto-rotation when drag starts (threshold crossed), resume when drag ends (pointer up), only if auto-rotation was enabled before the drag.
-
-**Rationale**: The spec (FR-009) requires that drag-rotation pauses auto-rotation during the gesture and resumes it on release. The implementation stores `autoRotateWasEnabled = this.autoRotate` on `pointerdown`, then:
-
-- On drag threshold crossed: `this.autoRotate = false` (stops the `animate()` loop from adding rotation)
-- On `pointerup`: if `autoRotateWasEnabled` was true, `this.autoRotate = true` (resumes)
-- If the user toggled auto-rotation OFF via the UI button during the drag, `autoRotateWasEnabled` still reflects the pre-drag state, so it would incorrectly resume. To handle this: only resume if `this.userWantsAutoRotate` is still true at `pointerup` time.
-
-This matches the existing pattern where `animateToTarget()` stores and restores auto-rotation state.
-
-**Alternatives considered**:
-
-- Always resume auto-rotation after drag (rejected): If the user disabled auto-rotation before dragging, it would re-enable unexpectedly.
-- Never resume (rejected): Violates FR-009 — the user would have to manually re-enable auto-rotation after every drag.
+**Alternatives considered**: None — the architecture naturally supports both operations on the same state without conflict.

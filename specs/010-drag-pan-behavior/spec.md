@@ -1,114 +1,124 @@
-# Feature Specification: Drag/Touch Pan Behavior for 2D Zoom and 3D Globe Rotation
+# Feature Specification: Drag Pan & Rotate Behavior
 
 **Feature Branch**: `010-drag-pan-behavior`
-**Created**: 2026-02-06
+**Created**: 2026-02-07
 **Status**: Draft
-**Input**: User description: "Click and hold (drag) or touch and hold (mobile) are required for the 2d and 3d map. 2d map must zoom in and out when the user holds and drags on the map. 3d map must cause globe to spin left or right when the user holds and drags over the globe."
+**Input**: User description: "The current branch must be modified so that instead of the mouse-down and drag (or press and drag on mobile) zooming the 2d map in and out, it should allow the user to slide the view around --more akin to google map behavior. On the 3d map the behavior should work left-to-right rather than up and down (so the globe spin feels realistic)."
 
 ## User Scenarios & Testing _(mandatory)_
 
-### User Story 1 - Drag-to-Zoom on 2D Map (Priority: P1)
+### User Story 1 - Drag to Pan the 2D Map (Priority: P1)
 
-A user viewing the 2D SVG map wants to zoom in or out by clicking and dragging (desktop) or touching and dragging (mobile). They press and hold on the map, then drag vertically — dragging upward zooms in toward the initial press point, and dragging downward zooms out away from the initial press point. The zoom is smooth and proportional to the drag distance, and is centered on the point where the user initially pressed down.
+A user viewing the 2D map has zoomed in to a specific area and wants to explore nearby regions without zooming back out. They press and hold (mouse button or finger on mobile), then drag in any direction. The visible map area slides in the direction of the drag, just like panning on Google Maps. Dragging left reveals content to the right of the current view, dragging up reveals content below, and so on. This replaces the current vertical-drag-to-zoom behavior.
 
-**Why this priority**: Drag-to-zoom is the primary interaction for this feature on the 2D map. It enables intuitive exploration on both desktop and mobile devices, filling a critical interaction gap that scroll-wheel zoom alone cannot address (mobile devices have no scroll wheel). This is the highest-value enhancement because it enables the most common map exploration workflow on touch devices.
+**Why this priority**: Drag-to-pan is the most fundamental and universally expected map navigation gesture. Without it, users who have zoomed in have no intuitive way to navigate the zoomed view. This is the core value of the feature and directly addresses the user request.
 
-**Independent Test**: Can be fully tested by clicking/tapping and dragging vertically on the 2D map. Delivers immediate value by enabling zoom control on all device types.
+**Independent Test**: Can be fully tested by zooming into the 2D map (via scroll wheel), then pressing and dragging in various directions to slide the view. Delivers immediate value by enabling standard map navigation.
 
 **Acceptance Scenarios**:
 
-1. **Given** the 2D map is displayed at its default view, **When** the user clicks and holds on the map then drags upward, **Then** the map zooms in toward the initial click position proportionally to the drag distance
-2. **Given** the 2D map is zoomed in, **When** the user clicks and holds on the map then drags downward, **Then** the map zooms out away from the initial click position proportionally to the drag distance
-3. **Given** the 2D map is at maximum zoom, **When** the user drags upward, **Then** the zoom level does not exceed the maximum (clamped)
-4. **Given** the 2D map is at minimum zoom (full view), **When** the user drags downward, **Then** the zoom level does not go below the minimum (clamped)
-5. **Given** the user is on a mobile device viewing the 2D map, **When** the user touches and drags vertically on the map, **Then** the map zooms in or out identically to the desktop click-and-drag behavior
-6. **Given** the user releases the mouse button or lifts their finger, **When** the drag gesture ends, **Then** the zoom level remains at its current position (no snap-back or drift)
+1. **Given** the 2D map is zoomed in, **When** the user presses and drags to the left, **Then** the visible map area shifts to reveal content to the right (the view follows the opposite direction of the drag, i.e., the map slides with the cursor)
+2. **Given** the 2D map is zoomed in, **When** the user presses and drags upward, **Then** the visible map area shifts to reveal content below
+3. **Given** the 2D map is zoomed in, **When** the user presses and drags diagonally, **Then** the visible map area shifts in the corresponding diagonal direction
+4. **Given** the 2D map is at its default (fully zoomed out) view, **When** the user presses and drags, **Then** the view does not pan beyond the map boundaries (the map stays within its natural bounds)
+5. **Given** the 2D map is zoomed in and panned to a corner, **When** the user drags toward the edge, **Then** the pan stops at the map boundary and does not reveal empty space
+6. **Given** a touch device, **When** the user presses and drags on the 2D map, **Then** the pan behavior works identically to mouse drag
 
 ---
 
-### User Story 2 - Drag-to-Rotate on 3D Globe (Priority: P1)
+### User Story 2 - Drag to Rotate the 3D Globe Horizontally (Priority: P1)
 
-A user viewing the 3D globe wants to manually rotate it by clicking and dragging (desktop) or touching and dragging (mobile). They press and hold on the globe, then drag horizontally — dragging left causes the globe to spin left, and dragging right causes it to spin right. The rotation is smooth and proportional to the drag distance.
+A user viewing the 3D globe wants to spin it to explore different geographical areas. They press and hold, then drag left or right. The globe rotates horizontally (longitudinally) in the direction of the drag, creating a natural spinning motion. Dragging right spins the globe so that the visible face moves to the right (new content appears from the left). Vertical drag movement is ignored for rotation, so the globe only spins on its vertical axis -- this feels realistic because real globes spin left and right, not up and down.
 
-**Why this priority**: This is co-equal with the 2D zoom as it fulfills the other half of the feature request. Globe rotation via drag provides an intuitive direct-manipulation feel that complements the existing auto-rotation toggle and scroll-wheel rotation, and is the only rotation method available on mobile devices.
+**Why this priority**: This is co-equal with the 2D pan as it addresses the second half of the user's request. Horizontal-only drag rotation makes the globe interaction feel physically realistic and intuitive. This modifies the existing drag-rotate behavior to restrict it to horizontal movement only (the current implementation already rotates horizontally, so this story primarily confirms the direction and ensures vertical drag is ignored).
 
-**Independent Test**: Can be fully tested by clicking/tapping and dragging horizontally on the 3D globe. Delivers immediate value by enabling manual globe exploration on all device types.
+**Independent Test**: Can be fully tested by pressing and dragging left and right on the 3D globe and observing horizontal rotation. Dragging up or down should produce no rotation. Delivers immediate value by providing realistic globe spin control.
 
 **Acceptance Scenarios**:
 
-1. **Given** the 3D globe is displayed, **When** the user clicks and holds on the globe then drags to the left, **Then** the globe rotates to the left proportionally to the drag distance
-2. **Given** the 3D globe is displayed, **When** the user clicks and holds on the globe then drags to the right, **Then** the globe rotates to the right proportionally to the drag distance
-3. **Given** the globe is auto-rotating, **When** the user clicks and drags on the globe, **Then** auto-rotation pauses for the duration of the drag, and the manual drag rotation is applied instead
-4. **Given** the user releases the mouse button or lifts their finger after dragging the globe, **When** the drag gesture ends, **Then** auto-rotation resumes (if it was enabled) from the globe's current rotational position
-5. **Given** the user is on a mobile device viewing the 3D globe, **When** the user touches and drags horizontally on the globe, **Then** the globe rotates identically to the desktop click-and-drag behavior
+1. **Given** the 3D globe is displayed, **When** the user presses and drags to the right, **Then** the globe rotates so the visible face moves rightward (counterclockwise when viewed from above)
+2. **Given** the 3D globe is displayed, **When** the user presses and drags to the left, **Then** the globe rotates so the visible face moves leftward (clockwise when viewed from above)
+3. **Given** the 3D globe is displayed, **When** the user presses and drags vertically (up or down only), **Then** the globe does not rotate
+4. **Given** the 3D globe is displayed, **When** the user presses and drags diagonally, **Then** only the horizontal component of the drag causes rotation (vertical component is ignored)
+5. **Given** the globe is auto-rotating, **When** the user presses and drags horizontally, **Then** the manual drag rotation overrides auto-rotation during the drag gesture
+6. **Given** a touch device, **When** the user presses and drags horizontally on the 3D globe, **Then** the rotation behavior works identically to mouse drag
 
 ---
 
-### User Story 3 - Drag Gesture Does Not Conflict with Existing Interactions (Priority: P2)
+### User Story 3 - Drag Gesture Does Not Trigger Click Actions (Priority: P2)
 
-When a user drags on either map, the drag gesture must not interfere with existing click-to-select behavior (clicking a region or office marker) or with normal page scrolling outside the map area. A short click (without significant drag distance) should still trigger the existing selection behavior.
+When a user performs a drag gesture (pan on 2D, rotate on 3D), releasing the press must not trigger a click event on the underlying map element. This prevents accidental region or office selections when the user intended to navigate.
 
-**Why this priority**: This is essential for a polished user experience but is a supporting behavior rather than a primary feature. Without proper gesture discrimination, drag behavior would break the existing click-to-select interactions that users rely on.
+**Why this priority**: This is a supporting behavior that ensures the primary drag interactions feel clean and intentional. Without click suppression, every pan or rotate gesture would accidentally select regions/offices on release.
 
-**Independent Test**: Can be tested by clicking on regions/markers (short click without dragging) and verifying selection still works, then dragging and verifying zoom/rotation occurs without triggering selection.
+**Independent Test**: Can be tested by pressing on a region, dragging past the threshold, and releasing -- the region should not be selected.
 
 **Acceptance Scenarios**:
 
-1. **Given** the user is on either map, **When** the user clicks briefly on a region or marker without dragging, **Then** the existing selection behavior fires normally (region highlights, office details appear)
-2. **Given** the user is on either map, **When** the user clicks and drags beyond a small threshold distance, **Then** the drag gesture is recognized and selection behavior is suppressed
-3. **Given** the user's cursor or finger is outside the map area, **When** the user attempts to scroll or drag, **Then** normal page behavior continues unaffected
-4. **Given** the user begins a drag inside the map and moves the cursor outside the map boundary, **When** the cursor exits the map area, **Then** the drag gesture is cleanly terminated and the map state remains stable
+1. **Given** the user presses on a selectable region on the 2D map, **When** they drag beyond the activation threshold and release, **Then** the region is not selected
+2. **Given** the user presses on a selectable element on the 3D globe, **When** they drag beyond the activation threshold and release, **Then** the element is not selected
+3. **Given** the user presses and releases without dragging (or with movement below the threshold), **When** the press is on a selectable element, **Then** the click/selection behavior works normally
+
+---
+
+### User Story 4 - Removal of Drag-to-Zoom on 2D Map (Priority: P2)
+
+The existing drag-to-zoom behavior on the 2D map (where vertical dragging zooms in and out) must be completely replaced by the new drag-to-pan behavior. Zoom functionality remains available exclusively through the scroll wheel. Users should not experience any residual zoom-on-drag behavior.
+
+**Why this priority**: This is essential for the feature to work correctly. If both drag-zoom and drag-pan coexist, the gestures would conflict. The user explicitly requested that drag should pan instead of zoom.
+
+**Independent Test**: Can be tested by pressing and dragging vertically on the 2D map and confirming the view pans vertically rather than zooming.
+
+**Acceptance Scenarios**:
+
+1. **Given** the 2D map is displayed at any zoom level, **When** the user presses and drags vertically, **Then** the map pans vertically and does not zoom
+2. **Given** the 2D map is displayed, **When** the user uses the scroll wheel, **Then** zoom behavior continues to work as before (scroll-wheel zoom is unaffected)
 
 ---
 
 ### Edge Cases
 
-- What happens when the user drags very quickly (fast flick gesture)? The system should handle rapid movement gracefully without lag, visual jitter, or excessive zoom/rotation overshoot.
-- What happens when the user drags on the map while a region/office zoom animation is in progress on the 2D map? The drag-zoom should cancel the animation and take over control from the current zoom state.
-- What happens when the user drags on the globe while a camera animation is in progress on the 3D globe? The manual drag rotation should take precedence, pausing auto-rotation and overriding the animation.
-- What happens when the user uses multi-touch gestures (e.g., pinch-to-zoom)? Multi-touch gestures are outside the scope of this feature and should not be intercepted. Only single-finger/single-pointer drag is handled.
-- What happens on devices with both mouse and touch input (e.g., laptops with touchscreens)? Both input methods should work independently and produce the same behavior.
-- What happens when the user right-clicks and drags? Only primary button (left-click) drags should trigger zoom/rotation. Right-click drags should be ignored.
-- What happens when the user starts a drag on one map and the view switches to the other map mid-drag? The drag gesture should be cleanly terminated when the map view changes.
+- What happens when the user drags very rapidly across the map? The pan/rotation should remain smooth and proportional without lag or visual jitter.
+- What happens when the user starts a drag on the map and moves the cursor outside the map container? The drag should continue tracking and complete cleanly when released.
+- What happens on a touch device when the user starts a single-finger drag while a multi-touch gesture is in progress? Single-finger drag should be the trigger for pan/rotate.
+- What happens when the 2D map is fully zoomed out and the user drags? Panning has no effect since the full map is already visible, but the gesture should still be handled gracefully (no errors, no visual glitches).
+- What happens when the user drags on the 3D globe while a camera animation (e.g., auto-rotation or click-to-zoom animation) is in progress? The manual drag should take priority and interrupt the animation.
 
 ## Requirements _(mandatory)_
 
 ### Functional Requirements
 
-- **FR-001**: The 2D map MUST zoom in when the user clicks/touches and drags upward on the map
-- **FR-002**: The 2D map MUST zoom out when the user clicks/touches and drags downward on the map
-- **FR-003**: The 2D drag-zoom MUST be centered on the position where the user initially pressed down, not the center of the viewport
-- **FR-004**: The 2D drag-zoom amount MUST be proportional to the vertical drag distance
-- **FR-005**: The 2D zoom level MUST be clamped between a minimum (full map view) and a maximum (closest zoom) to prevent over-zooming
-- **FR-006**: The 3D globe MUST rotate to the left when the user clicks/touches and drags to the left on the globe
-- **FR-007**: The 3D globe MUST rotate to the right when the user clicks/touches and drags to the right on the globe
-- **FR-008**: The 3D globe rotation amount MUST be proportional to the horizontal drag distance
-- **FR-009**: The 3D drag-rotation MUST pause auto-rotation for the duration of the drag gesture and resume it upon release (if auto-rotation was enabled)
-- **FR-010**: Both maps MUST support touch input (single-finger drag) with identical behavior to mouse drag
-- **FR-011**: Both maps MUST distinguish between a short click/tap (which triggers existing selection behavior) and a drag gesture (which triggers zoom/rotation), using a minimum drag distance threshold
-- **FR-012**: Both maps MUST NOT interfere with normal page interactions when the cursor/finger is outside the map area
-- **FR-013**: Both maps MUST handle rapid drag movements without visual jitter or performance degradation
-- **FR-014**: Only primary pointer input (left mouse button, single finger touch) MUST trigger drag behavior; secondary inputs (right-click, multi-touch) MUST be ignored
-- **FR-015**: The drag gesture MUST terminate cleanly when the user releases the pointer, lifts their finger, or moves the pointer outside the map boundary
+- **FR-001**: The 2D map MUST pan (translate the visible area) when the user presses and drags in any direction
+- **FR-002**: The 2D pan direction MUST follow the cursor/finger -- dragging left moves the view left, making content to the right visible (natural/direct panning)
+- **FR-003**: The 2D pan amount MUST be proportional to the drag distance, providing one-to-one correspondence between cursor movement and map movement
+- **FR-004**: The 2D map MUST NOT pan beyond the natural map boundaries, preventing empty space from being revealed
+- **FR-005**: The 2D map MUST NOT exhibit any drag-to-zoom behavior -- the previous vertical-drag-zoom MUST be completely removed
+- **FR-006**: The 2D scroll-wheel zoom MUST continue to function as before, unaffected by the drag behavior change
+- **FR-007**: The 3D globe MUST rotate horizontally (around its vertical axis) when the user presses and drags left or right
+- **FR-008**: The 3D globe drag rotation MUST respond only to horizontal (left-right) drag movement; vertical drag movement MUST be ignored for rotation purposes
+- **FR-009**: The 3D globe rotation direction MUST match the drag direction -- dragging right rotates the visible face to the right
+- **FR-010**: The 3D globe drag rotation MUST be proportional to the horizontal drag distance
+- **FR-011**: Both maps MUST use a small movement threshold before activating drag mode, preventing accidental drags from interfering with click/tap selections
+- **FR-012**: Both maps MUST suppress click events on the underlying elements after a drag gesture that exceeds the activation threshold
+- **FR-013**: Both maps MUST support both mouse and touch input for drag gestures
+- **FR-014**: The 3D globe drag rotation MUST coexist with the existing auto-rotation toggle and scroll-wheel rotation without conflict
 
 ## Assumptions
 
-- "Drag upward" means moving the pointer/finger toward the top of the screen (negative Y direction), which zooms in. "Drag downward" means moving toward the bottom of the screen (positive Y direction), which zooms out.
-- "Drag left/right" for the 3D globe refers to horizontal pointer movement, which maps to longitudinal rotation around the globe's vertical axis.
-- The drag distance threshold for distinguishing a click from a drag will use a sensible default (e.g., 5-10 pixels of movement). No specific numeric threshold is prescribed.
-- Zoom speed/sensitivity and rotation speed/sensitivity will use sensible defaults tuned during implementation. No specific numeric targets are prescribed.
-- The existing scroll-wheel zoom (2D) and scroll-wheel rotation (3D) from feature 009 remain fully functional alongside the new drag behaviors. Both input methods coexist.
-- Existing click-to-select regions, click-to-select offices, keyboard navigation, and all other current interactions remain fully functional and unaffected.
-- Multi-touch gestures (pinch-to-zoom, two-finger rotate) are explicitly out of scope for this feature.
+- "Drag" refers to a press-and-hold followed by movement, using either mouse (pointerdown + pointermove) or touch input. The existing pointer event infrastructure will be reused.
+- The activation threshold (small dead zone before drag engages) will remain at or near the current 5-pixel value to prevent accidental drags from triggering on intended clicks.
+- Panning on the 2D map uses "natural" or "direct" panning -- the map moves with the cursor, the same convention used by Google Maps, Apple Maps, and all major mapping applications.
+- On the 3D globe, horizontal-only rotation means only the X-axis component of drag movement contributes to globe rotation. The existing rotation sensitivity will be preserved or tuned slightly for the new behavior.
+- When the 2D map is fully zoomed out, there is nothing to pan, so the drag gesture is a no-op visually but still tracked correctly (threshold, click suppression, etc.).
+- The existing drag-rotate behavior on the 3D globe already works in the correct horizontal direction; this feature primarily confirms that behavior and ensures the vertical component is fully ignored.
 
 ## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 
-- **SC-001**: Users can zoom from minimum to maximum zoom level on the 2D map using a single drag gesture within 3 seconds
-- **SC-002**: Users can rotate the 3D globe a full 360 degrees using a single drag gesture by dragging across the full width of the globe area
-- **SC-003**: Drag interactions feel responsive with no perceptible delay between pointer movement and visual feedback (under 50ms perceived latency)
-- **SC-004**: Short clicks on regions and office markers continue to trigger selection behavior with 100% reliability after drag behavior is added
-- **SC-005**: Drag behavior works identically on touch devices (mobile/tablet) and desktop devices with a mouse
-- **SC-006**: All existing map interactions (click-to-select regions, click-to-select offices, keyboard navigation, scroll-wheel zoom/rotation, auto-rotation toggle) continue to function correctly after drag behavior is added
-- **SC-007**: Drag behavior works consistently across modern browsers (Chrome, Firefox, Edge, Safari) on both desktop and mobile
+- **SC-001**: Users can pan the zoomed-in 2D map to any area within the map boundaries using drag gestures, reaching opposite edges within 3 seconds of continuous dragging
+- **SC-002**: Users can rotate the 3D globe a full 360 degrees using only horizontal drag gestures within 5 seconds of continuous dragging
+- **SC-003**: Drag interactions feel responsive with no perceptible delay between input and visual feedback (under 100ms perceived latency)
+- **SC-004**: Zero accidental region/office selections occur during normal drag-to-pan or drag-to-rotate gestures
+- **SC-005**: All existing map interactions (scroll-wheel zoom on 2D, scroll-wheel rotation on 3D, click-to-select regions, click-to-select offices, keyboard navigation, auto-rotation toggle) continue to function correctly after the drag behavior changes
+- **SC-006**: Drag-to-pan and drag-to-rotate work consistently across modern desktop and mobile browsers (Chrome, Firefox, Edge, Safari)

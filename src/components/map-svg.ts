@@ -27,9 +27,8 @@ const ZOOM_OUT_FACTOR = 1.1;
 const MIN_VIEWBOX_WIDTH = 60; // Maximum zoom (~16x)
 const MAX_VIEWBOX_WIDTH = MAP_WIDTH; // Minimum zoom (full view)
 
-// Drag-zoom constants
+// Drag-pan constants
 const DRAG_THRESHOLD = 5; // Pixels of movement before drag mode activates
-const DRAG_ZOOM_SENSITIVITY = 1.005; // Exponential base per pixel of vertical drag
 
 /** ViewBox dimensions for zoom calculations */
 export interface ViewBoxRect {
@@ -73,37 +72,31 @@ export function computeZoomedViewBox(
 }
 
 /**
- * Compute a new viewBox after a drag-zoom gesture.
+ * Compute a new viewBox after a drag-pan gesture.
  * Pure function — no DOM dependencies, exported for testability.
  *
- * Uses exponential mapping: factor = Math.pow(DRAG_ZOOM_SENSITIVITY, dragDeltaY)
- * Positive deltaY (drag down) = zoom out, negative deltaY (drag up) = zoom in.
- * The anchor point (initial press position in SVG coords) remains stationary.
+ * Converts screen pixel delta to SVG coordinate delta, then translates the
+ * viewBox origin. Width and height are unchanged — pan does not zoom.
+ * The origin is clamped so the viewBox never extends outside [0, 0, MAP_WIDTH, MAP_HEIGHT].
  */
-export function computeDragZoomedViewBox(
+export function computeDragPannedViewBox(
   startViewBox: ViewBoxRect,
-  anchorSVG: { x: number; y: number },
-  dragDeltaY: number
+  screenDelta: { dx: number; dy: number },
+  containerSize: { width: number; height: number }
 ): ViewBoxRect {
-  const factor = Math.pow(DRAG_ZOOM_SENSITIVITY, dragDeltaY);
+  // Convert screen delta to SVG delta
+  const svgDeltaX = screenDelta.dx * (startViewBox.w / containerSize.width);
+  const svgDeltaY = screenDelta.dy * (startViewBox.h / containerSize.height);
 
-  let newW = startViewBox.w * factor;
-  let newH = startViewBox.h * factor;
+  // Translate origin (subtract so map follows cursor direction)
+  let newX = startViewBox.x - svgDeltaX;
+  let newY = startViewBox.y - svgDeltaY;
 
-  // Clamp width to [MIN_VIEWBOX_WIDTH, MAX_VIEWBOX_WIDTH]
-  if (newW < MIN_VIEWBOX_WIDTH) {
-    newW = MIN_VIEWBOX_WIDTH;
-    newH = MIN_VIEWBOX_WIDTH * (MAP_HEIGHT / MAP_WIDTH);
-  } else if (newW > MAX_VIEWBOX_WIDTH) {
-    newW = MAX_VIEWBOX_WIDTH;
-    newH = MAP_HEIGHT;
-  }
+  // Clamp to map boundaries
+  newX = Math.max(0, Math.min(MAP_WIDTH - startViewBox.w, newX));
+  newY = Math.max(0, Math.min(MAP_HEIGHT - startViewBox.h, newY));
 
-  // Keep anchor point stationary: adjust origin so anchorSVG maps to the same screen position
-  const newX = anchorSVG.x - (anchorSVG.x - startViewBox.x) * (newW / startViewBox.w);
-  const newY = anchorSVG.y - (anchorSVG.y - startViewBox.y) * (newH / startViewBox.h);
-
-  return { x: newX, y: newY, w: newW, h: newH };
+  return { x: newX, y: newY, w: startViewBox.w, h: startViewBox.h };
 }
 
 // Export getMarkerPosition for use by other components
@@ -122,12 +115,12 @@ export class MapSvg {
   private viewBoxAnimationId: number | null = null;
   private boundHandleWheel: ((e: WheelEvent) => void) | null = null;
 
-  // Drag-zoom state
+  // Drag-pan state
   private isDragging: boolean = false;
   private wasDragging: boolean = false;
-  private dragStartY: number | null = null;
+  private dragStartScreenPos: { x: number; y: number } | null = null;
   private dragStartViewBox: ViewBoxRect | null = null;
-  private dragAnchorSVG: { x: number; y: number } | null = null;
+  private activePointerId: number | null = null;
   private boundPointerDown: ((e: PointerEvent) => void) | null = null;
   private boundPointerMove: ((e: PointerEvent) => void) | null = null;
   private boundPointerUp: ((e: PointerEvent) => void) | null = null;
@@ -209,7 +202,7 @@ export class MapSvg {
     this.boundHandleWheel = (e: WheelEvent) => this.handleWheel(e);
     this.container.addEventListener('wheel', this.boundHandleWheel, { passive: false });
 
-    // Register pointer event listeners for drag-zoom
+    // Register pointer event listeners for drag-pan
     this.boundPointerDown = (e: PointerEvent) => this.handlePointerDown(e);
     this.boundPointerMove = (e: PointerEvent) => this.handlePointerMove(e);
     this.boundPointerUp = (e: PointerEvent) => this.handlePointerUp(e);
@@ -532,24 +525,10 @@ export class MapSvg {
   private handlePointerDown(event: PointerEvent): void {
     if (!event.isPrimary || event.button !== 0) return;
 
-    const svg = this.svgElement;
-    if (!svg) return;
-
-    this.dragStartY = event.clientY;
+    this.dragStartScreenPos = { x: event.clientX, y: event.clientY };
     this.dragStartViewBox = { ...this.currentViewBox };
-
-    // Compute anchor point in SVG coordinates (zoom center)
-    const ctm = svg.getScreenCTM();
-    if (ctm) {
-      const point = svg.createSVGPoint();
-      point.x = event.clientX;
-      point.y = event.clientY;
-      const svgPoint = point.matrixTransform(ctm.inverse());
-      this.dragAnchorSVG = { x: svgPoint.x, y: svgPoint.y };
-    }
-
     this.isDragging = false;
-    this.container.setPointerCapture(event.pointerId);
+    this.activePointerId = event.pointerId;
 
     // Cancel any in-progress viewBox animation
     if (this.viewBoxAnimationId !== null) {
@@ -559,21 +538,29 @@ export class MapSvg {
   }
 
   private handlePointerMove(event: PointerEvent): void {
-    if (!event.isPrimary || this.dragStartY === null) return;
-    if (!this.dragStartViewBox || !this.dragAnchorSVG) return;
+    if (!event.isPrimary || this.dragStartScreenPos === null) return;
+    if (!this.dragStartViewBox) return;
 
-    const deltaY = event.clientY - this.dragStartY;
+    const deltaX = event.clientX - this.dragStartScreenPos.x;
+    const deltaY = event.clientY - this.dragStartScreenPos.y;
 
     // Check drag threshold
-    if (!this.isDragging && Math.abs(deltaY) <= DRAG_THRESHOLD) return;
+    if (!this.isDragging && Math.hypot(deltaX, deltaY) <= DRAG_THRESHOLD) return;
 
     if (!this.isDragging) {
       this.isDragging = true;
       this.container.style.cursor = 'grabbing';
+      if (this.activePointerId !== null) {
+        this.container.setPointerCapture(this.activePointerId);
+      }
     }
 
     // Compute new viewBox from drag start (cumulative, not incremental)
-    const newViewBox = computeDragZoomedViewBox(this.dragStartViewBox, this.dragAnchorSVG, deltaY);
+    const newViewBox = computeDragPannedViewBox(
+      this.dragStartViewBox,
+      { dx: deltaX, dy: deltaY },
+      { width: this.container.clientWidth, height: this.container.clientHeight }
+    );
 
     // Apply immediately
     this.currentViewBox = newViewBox;
@@ -594,9 +581,9 @@ export class MapSvg {
 
     // Reset drag state
     this.isDragging = false;
-    this.dragStartY = null;
+    this.dragStartScreenPos = null;
     this.dragStartViewBox = null;
-    this.dragAnchorSVG = null;
+    this.activePointerId = null;
     this.container.style.cursor = 'grab';
   }
 
