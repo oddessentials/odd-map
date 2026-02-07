@@ -140,6 +140,10 @@
         "lat": 41.0,
         "lon": -74.0
       }
+    },
+    "mapProvider": {
+      "provider": "maplibre",
+      "defaultZoom": 15
     }
   }
 }

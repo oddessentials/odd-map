@@ -121,6 +121,26 @@ export function getOfficesByRegion(regionName: string): Office[] {
 }
 
 /**
+ * Get map provider configuration from the active client config.
+ * Returns defaults (MapLibre, zoom 15) when mapProvider is not configured.
+ */
+export function getMapProviderConfig(): {
+  provider: 'maplibre' | 'apple';
+  tileStyleUrl?: string;
+  appleMapToken?: string;
+  defaultZoom: number;
+} {
+  const config = getActiveConfig();
+  const mp = config.theme?.mapProvider;
+  return {
+    provider: mp?.provider ?? 'maplibre',
+    tileStyleUrl: mp?.tileStyleUrl,
+    appleMapToken: mp?.appleMapToken,
+    defaultZoom: mp?.defaultZoom ?? 15,
+  };
+}
+
+/**
  * Cross-validate that each office's region field matches a known region
  * from the map config. Emits console warnings for mismatches.
  */

@@ -14,6 +14,7 @@ import type { Region, Office, OfficeWithRegion } from './types/index.js';
 import type { MarkerVisualState } from './lib/marker-state.js';
 import { MapSvg } from './components/map-svg.js';
 import { Map3D } from './components/map-3d.js';
+import { TileMap } from './components/tile-map.js';
 import { DetailsPanel } from './components/details-panel.js';
 import { SpecialtyDivisionsPanel } from './components/specialty-divisions.js';
 import { RegionList } from './components/region-list.js';
@@ -47,11 +48,13 @@ interface MapComponent {
   dispose?(): void;
 }
 
+type MapMode = '2d' | '3d' | 'tile';
+
 class App {
   private state: StateValue = States.USA_VIEW;
   private selectedRegion: Region | null = null;
   private selectedOffice: Office | null = null;
-  private use3D: boolean;
+  private mapMode: MapMode;
   private transitioning: boolean = false;
   private resetting: boolean = false;
 
@@ -69,12 +72,12 @@ class App {
   private specialtyContainer: HTMLElement | null;
   private resetBtn: HTMLElement | null;
   private stateIndicator: HTMLElement | null;
-  private mapToggleBtn: HTMLElement | null;
+  private modeSelector: HTMLElement | null;
   private spinBtn: HTMLElement | null;
 
   constructor() {
     // Rendering mode: default to 2D for testing
-    this.use3D = false;
+    this.mapMode = '2d';
 
     // DOM elements
     this.mapContainer = document.getElementById('map-container');
@@ -83,7 +86,7 @@ class App {
     this.specialtyContainer = document.getElementById('specialty-divisions');
     this.resetBtn = document.getElementById('reset-btn');
     this.stateIndicator = document.getElementById('state-indicator');
-    this.mapToggleBtn = document.getElementById('map-toggle');
+    this.modeSelector = document.querySelector('.mode-selector');
     this.spinBtn = document.getElementById('spin-toggle');
 
     this.init();
@@ -160,10 +163,17 @@ class App {
     // Initialize map based on WebGL availability and user preference
     await this.initMap(); // CRITICAL: Must wait for map to fully initialize
 
-    // Map toggle button
-    if (this.mapToggleBtn) {
-      this.mapToggleBtn.addEventListener('click', () => this.toggleMapMode());
-      this.updateToggleButton();
+    // Mode selector (2D / 3D / Map)
+    if (this.modeSelector) {
+      this.modeSelector.addEventListener('click', (e) => {
+        const btn = (e.target as HTMLElement).closest('.mode-btn') as HTMLElement | null;
+        if (!btn) return;
+        const mode = btn.dataset.mode as MapMode | undefined;
+        if (mode && mode !== this.mapMode) {
+          this.switchMapMode(mode);
+        }
+      });
+      this.updateModeSelector();
     }
 
     // Spin toggle button (3D mode only)
@@ -229,16 +239,30 @@ class App {
       onReset: () => this.handleReset(),
     };
 
-    if (this.use3D) {
+    if (this.mapMode === '3d') {
       try {
         this.map = new Map3D(this.mapContainer, mapOptions);
         // Map3D auto-initializes in constructor, no init() needed
         document.body.dataset.mapMode = '3d';
       } catch (e) {
         console.warn('3D map failed, falling back to 2D:', e);
-        this.use3D = false;
+        this.mapMode = '2d';
         const map2d = new MapSvg(this.mapContainer, mapOptions);
         await map2d.init(); // CRITICAL: Must await
+        this.map = map2d;
+        document.body.dataset.mapMode = '2d';
+      }
+    } else if (this.mapMode === 'tile') {
+      try {
+        const tileMap = new TileMap(this.mapContainer, mapOptions);
+        await tileMap.init();
+        this.map = tileMap;
+        document.body.dataset.mapMode = 'tile';
+      } catch (e) {
+        console.warn('Tile map failed, falling back to 2D:', e);
+        this.mapMode = '2d';
+        const map2d = new MapSvg(this.mapContainer, mapOptions);
+        await map2d.init();
         this.map = map2d;
         document.body.dataset.mapMode = '2d';
       }
@@ -255,18 +279,19 @@ class App {
   // Set slightly longer than typical double-click interval (300-500ms)
   private static readonly TOGGLE_DEBOUNCE_MS = 500;
 
-  private async toggleMapMode(): Promise<void> {
+  private async switchMapMode(mode: MapMode): Promise<void> {
     // Guard against re-entry during transition
     if (this.transitioning) return;
+    if (mode === this.mapMode) return;
 
-    // Debounce: prevent rapid successive toggles (e.g., double-click)
+    // Debounce: prevent rapid successive switches (e.g., double-click)
     // Uses performance.now() for monotonic timing unaffected by system clock
     const now = performance.now();
     if (now - this.lastToggleTime < App.TOGGLE_DEBOUNCE_MS) return;
     this.lastToggleTime = now;
 
     this.transitioning = true;
-    this.setToggleButtonEnabled(false);
+    this.setModeButtonsEnabled(false);
 
     try {
       // Capture stable identifiers BEFORE disposing map
@@ -276,9 +301,9 @@ class App {
       const wasOffice = this.selectedOffice; // Keep for panel restoration
       const wasRegion = this.selectedRegion; // Keep for panel restoration
 
-      this.use3D = !this.use3D;
+      this.mapMode = mode;
       await this.initMap(); // CRITICAL: Must await full initialization
-      this.updateToggleButton();
+      this.updateModeSelector();
       this.updateSpinButtonVisibility();
       this.updateSpinButton(); // Reset visual state (autoRotate defaults to false)
 
@@ -298,26 +323,31 @@ class App {
       }
     } finally {
       this.transitioning = false;
-      this.setToggleButtonEnabled(true);
+      this.setModeButtonsEnabled(true);
     }
   }
 
-  private updateToggleButton(): void {
-    if (this.mapToggleBtn) {
-      this.mapToggleBtn.textContent = this.use3D ? '2D' : '3D';
-      this.mapToggleBtn.setAttribute('aria-label', `Switch to ${this.use3D ? '2D' : '3D'} map`);
-      this.mapToggleBtn.title = `Switch to ${this.use3D ? '2D' : '3D'} view`;
-    }
+  private updateModeSelector(): void {
+    if (!this.modeSelector) return;
+    const buttons = this.modeSelector.querySelectorAll('.mode-btn');
+    buttons.forEach((btn) => {
+      const mode = (btn as HTMLElement).dataset.mode;
+      const isActive = mode === this.mapMode;
+      btn.classList.toggle('active', isActive);
+      (btn as HTMLElement).setAttribute('aria-pressed', String(isActive));
+    });
   }
 
-  private setToggleButtonEnabled(enabled: boolean): void {
-    if (this.mapToggleBtn) {
-      (this.mapToggleBtn as HTMLButtonElement).disabled = !enabled;
-    }
+  private setModeButtonsEnabled(enabled: boolean): void {
+    if (!this.modeSelector) return;
+    const buttons = this.modeSelector.querySelectorAll('.mode-btn');
+    buttons.forEach((btn) => {
+      (btn as HTMLButtonElement).disabled = !enabled;
+    });
   }
 
   private handleSpinToggle(): void {
-    if (!this.use3D || !this.map) return;
+    if (this.mapMode !== '3d' || !this.map) return;
 
     // Type guard: ensure map has toggleAutoRotate method
     if (!('toggleAutoRotate' in this.map)) return;
@@ -332,7 +362,7 @@ class App {
 
     // Get current rotation state from Map3D (with type guard)
     const isSpinning =
-      this.use3D && this.map && 'getAutoRotate' in this.map
+      this.mapMode === '3d' && this.map && 'getAutoRotate' in this.map
         ? (this.map as Map3D).getAutoRotate()
         : false;
 
@@ -347,7 +377,7 @@ class App {
     if (!this.spinBtn) return;
 
     // Show spin button only in 3D mode
-    this.spinBtn.hidden = !this.use3D;
+    this.spinBtn.hidden = this.mapMode !== '3d';
   }
 
   /**

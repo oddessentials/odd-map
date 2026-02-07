@@ -7,6 +7,7 @@
 
 import { escapeHtml } from '../lib/escape-html.js';
 import { getActiveConfig } from '../lib/client-config.js';
+import { MiniMap } from './mini-map.js';
 
 export class DetailsPanel {
   constructor(container, options = {}) {
@@ -18,6 +19,7 @@ export class DetailsPanel {
 
     this.currentOffice = null;
     this.currentRegion = null;
+    this.miniMap = null;
 
     this.init();
   }
@@ -60,6 +62,12 @@ export class DetailsPanel {
   }
 
   showRegion(region) {
+    // Dispose mini-map when switching to region view
+    if (this.miniMap) {
+      this.miniMap.dispose();
+      this.miniMap = null;
+    }
+
     this.currentRegion = region;
     this.currentOffice = null;
     this.closeBtn.classList.remove('panel-close--hidden');
@@ -135,6 +143,12 @@ export class DetailsPanel {
   }
 
   showOffice(office, region) {
+    // Dispose existing mini-map before replacing panel content
+    if (this.miniMap) {
+      this.miniMap.dispose();
+      this.miniMap = null;
+    }
+
     this.currentOffice = office;
     this.currentRegion = region;
     this.closeBtn.classList.remove('panel-close--hidden');
@@ -218,32 +232,35 @@ export class DetailsPanel {
       `;
     }
 
-    // Mini Google Map embed
-    if (office.coordinates?.lat && office.coordinates?.lon) {
-      const { lat, lon } = office.coordinates;
-      const mapQuery = office.address ? encodeURIComponent(office.address) : `${lat},${lon}`;
-
-      html += `
-        <div class="mini-map-container">
-          <iframe
-            class="mini-map-embed"
-            loading="lazy"
-            allowfullscreen
-            referrerpolicy="no-referrer-when-downgrade"
-            title="Map showing ${escapeHtml(office.city)}, ${escapeHtml(office.state)} office location"
-            src="https://www.google.com/maps?q=${mapQuery}&z=17&output=embed">
-          </iframe>
-        </div>
-      `;
-    }
-
     html += '</div>';
 
     this.bodyEl.innerHTML = html;
     this.container.classList.add('open');
+
+    // Append mini-map container AFTER innerHTML to avoid destroying
+    // a live MiniMap's DOM when showOffice() is called rapidly.
+    if (office.coordinates?.lat && office.coordinates?.lon) {
+      const miniMapContainer = document.createElement('div');
+      miniMapContainer.className = 'mini-map-container';
+      miniMapContainer.id = 'details-mini-map';
+      this.bodyEl.querySelector('.office-details')?.appendChild(miniMapContainer);
+
+      const brandColor =
+        getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() ||
+        '#00396c';
+
+      this.miniMap = new MiniMap(miniMapContainer);
+      this.miniMap.show(office, brandColor);
+    }
   }
 
   showPlaceholder(message) {
+    // Dispose mini-map when resetting panel
+    if (this.miniMap) {
+      this.miniMap.dispose();
+      this.miniMap = null;
+    }
+
     if (!message) {
       try {
         message = `Click on a region to explore ${getActiveConfig().name} offices.`;

@@ -118,29 +118,46 @@ body {
   border-color: rgba(255, 255, 255, 0.8);
 }
 
-.map-toggle {
+/* Three-way mode selector (2D / 3D / Map) */
+.mode-selector {
+  display: flex;
   flex-shrink: 0;
-  min-width: 48px;
-  color: var(--color-text-inverse);
-  border-color: rgba(255, 255, 255, 0.6);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.mode-btn {
+  padding: var(--space-1) var(--space-3);
+  min-width: 44px;
+  border: none;
+  border-right: 1px solid rgba(255, 255, 255, 0.2);
   background: rgba(255, 255, 255, 0.1);
-  font-weight: var(--font-bold);
-  transition: all var(--transition-fast);
+  color: var(--color-text-inverse);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast);
 }
 
-.map-toggle:hover:not(:disabled) {
+.mode-btn:last-child {
+  border-right: none;
+}
+
+.mode-btn:hover:not(:disabled):not(.active) {
   background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.8);
-  transform: scale(1.05);
 }
 
-.map-toggle:disabled,
-#map-toggle:disabled {
+.mode-btn.active {
+  background: var(--color-accent);
+  color: var(--color-text-inverse);
+}
+
+.mode-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  /* Note: pointer-events: none is intentionally omitted.
-     Native disabled attribute already prevents click events,
-     and omitting it allows testing frameworks to dispatch events. */
 }
 
 /* Spin toggle button (3D mode only) */
@@ -536,21 +553,168 @@ body {
   color: var(--color-text-muted);
 }
 
-/* Mini Google Map Embed */
+/* Interactive Mini-Map */
 .mini-map-container {
+  position: relative;
   margin-top: var(--space-4);
   border-radius: var(--radius-md);
   overflow: hidden;
   box-shadow: var(--shadow-md);
-  aspect-ratio: 16 / 10;
+  aspect-ratio: 16 / 12;
+  min-height: 200px;
   background: var(--color-bg-alt);
 }
 
-.mini-map-embed {
+.mini-map-wrapper {
   width: 100%;
   height: 100%;
-  border: none;
-  display: block;
+}
+
+.mini-map-expand-btn {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: var(--color-bg, #fff);
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  color: var(--color-text, #1f2937);
+  transition: all 0.15s ease;
+}
+
+.mini-map-expand-btn:hover {
+  background: var(--color-bg-alt, #f3f4f6);
+  box-shadow: var(--shadow-md);
+}
+
+.mini-map-expand-btn:focus-visible {
+  outline: 2px solid var(--color-accent, #ff6b35);
+  outline-offset: 2px;
+}
+
+/* Mini-map fallback message */
+.mini-map-fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: var(--space-4);
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.mini-map-fallback-hint {
+  font-size: var(--text-sm);
+  margin-top: var(--space-2);
+}
+
+/* Branded map marker (used by MapLibre provider) */
+.minimap-marker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+}
+
+.minimap-marker-pin {
+  width: 24px;
+  height: 24px;
+  border-radius: 50% 50% 50% 0;
+  background: var(--color-primary, #00396c);
+  transform: rotate(-45deg);
+  border: 2px solid #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.minimap-marker-shadow {
+  width: 12px;
+  height: 4px;
+  margin-top: 2px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 50%;
+}
+
+/* Map Expand Overlay */
+.map-expand-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  z-index: 1100;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.map-expand-overlay.visible {
+  opacity: 1;
+}
+
+.map-expand-dialog {
+  position: fixed;
+  top: 5vh;
+  left: 5vw;
+  right: 5vw;
+  bottom: 5vh;
+  background: var(--color-bg, #fff);
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  z-index: 1101;
+  opacity: 0;
+  transform: scale(0.95);
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.map-expand-dialog.visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.map-expand-content {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.map-expand-close-btn {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: var(--color-bg, #fff);
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+  color: var(--color-text, #1f2937);
+  transition: all 0.15s ease;
+}
+
+.map-expand-close-btn:hover {
+  background: var(--color-bg-alt, #f3f4f6);
+  color: var(--color-text, #1f2937);
+}
+
+.map-expand-close-btn:focus-visible {
+  outline: 2px solid var(--color-accent, #ff6b35);
+  outline-offset: 2px;
 }
 
 /* ============================================
@@ -996,10 +1160,10 @@ body {
   transition: all var(--transition-fast);
 }
 
-/* 3D mode indicator */
-body[data-map-mode='3d'] .map-toggle {
-  background: var(--color-accent);
-  border-color: var(--color-accent);
+/* Tile map container fills the map section */
+.tile-map-container {
+  width: 100%;
+  height: 100%;
 }
 
 /* Reduced motion preference */

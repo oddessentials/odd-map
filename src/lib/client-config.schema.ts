@@ -71,11 +71,21 @@ const CameraViewSchema = z.object({
   lon: z.number(),
 });
 
+const MapProviderConfigSchema = z
+  .object({
+    provider: z.enum(['maplibre', 'apple']).default('maplibre'),
+    tileStyleUrl: z.string().url().optional(),
+    appleMapToken: z.string().optional(),
+    defaultZoom: z.number().min(1).max(20).default(15),
+  })
+  .optional();
+
 const BrandThemeSchema = z.object({
   primaryColor: HexColorSchema.optional(),
   accentColor: HexColorSchema.optional(),
   regionColors: z.record(z.string(), HexColorSchema).optional(),
   cameraViews: z.record(z.string(), CameraViewSchema).optional(),
+  mapProvider: MapProviderConfigSchema,
 });
 
 const SpecialtyDivisionSchema = z.object({
