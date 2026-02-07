@@ -30,6 +30,12 @@ const MAX_VIEWBOX_WIDTH = MAP_WIDTH; // Minimum zoom (full view)
 // Drag-pan constants
 const DRAG_THRESHOLD = 5; // Pixels of movement before drag mode activates
 
+/** Point type for pinch gesture tracking */
+interface PointerPoint {
+  x: number;
+  y: number;
+}
+
 /** ViewBox dimensions for zoom calculations */
 export interface ViewBoxRect {
   x: number;
@@ -101,6 +107,72 @@ export function computeDragPannedViewBox(
   return { x: newX, y: newY, w: startViewBox.w, h: startViewBox.h };
 }
 
+/**
+ * Compute a new viewBox after a pinch-to-zoom gesture.
+ * Pure function — no DOM dependencies, exported for testability.
+ *
+ * Calculates zoom from the ratio of distances between two pointer pairs,
+ * centered on the midpoint in SVG coordinate space.
+ * Uses the same MIN_VIEWBOX_WIDTH / MAX_VIEWBOX_WIDTH clamping as scroll zoom.
+ */
+export function computePinchZoomedViewBox(
+  startViewBox: ViewBoxRect,
+  startPointers: [PointerPoint, PointerPoint],
+  currentPointers: [PointerPoint, PointerPoint],
+  containerSize: { width: number; height: number }
+): ViewBoxRect {
+  if (containerSize.width <= 0 || containerSize.height <= 0) return { ...startViewBox };
+
+  // Distance between fingers at start and now
+  const startDist = Math.hypot(
+    startPointers[1].x - startPointers[0].x,
+    startPointers[1].y - startPointers[0].y
+  );
+  const currentDist = Math.hypot(
+    currentPointers[1].x - currentPointers[0].x,
+    currentPointers[1].y - currentPointers[0].y
+  );
+
+  if (startDist === 0 || currentDist === 0) return { ...startViewBox };
+
+  // Scale factor: fingers apart → scale > 1 → zoom in (shrink viewBox)
+  const scale = startDist / currentDist;
+
+  let newW = startViewBox.w * scale;
+  let newH = startViewBox.h * scale;
+
+  // Clamp width to [MIN_VIEWBOX_WIDTH, MAX_VIEWBOX_WIDTH]
+  if (newW < MIN_VIEWBOX_WIDTH) {
+    newW = MIN_VIEWBOX_WIDTH;
+    newH = MIN_VIEWBOX_WIDTH * (MAP_HEIGHT / MAP_WIDTH);
+  } else if (newW > MAX_VIEWBOX_WIDTH) {
+    newW = MAX_VIEWBOX_WIDTH;
+    newH = MAP_HEIGHT;
+  }
+
+  // Midpoint of current pointers in screen space
+  const midScreenX = (currentPointers[0].x + currentPointers[1].x) / 2;
+  const midScreenY = (currentPointers[0].y + currentPointers[1].y) / 2;
+
+  // Convert screen midpoint to SVG coordinate space using startViewBox
+  const midSvgX = startViewBox.x + (midScreenX / containerSize.width) * startViewBox.w;
+  const midSvgY = startViewBox.y + (midScreenY / containerSize.height) * startViewBox.h;
+
+  // Keep midpoint stationary: the fraction of the midpoint in the new viewBox
+  // should match its fraction in screen space
+  const fracX = midScreenX / containerSize.width;
+  const fracY = midScreenY / containerSize.height;
+
+  let newX = midSvgX - fracX * newW;
+  let newY = midSvgY - fracY * newH;
+
+  // Clamp to map boundaries
+  newX = Math.max(0, Math.min(MAP_WIDTH - newW, newX));
+  newY = Math.max(0, Math.min(MAP_HEIGHT - newH, newY));
+
+  return { x: newX, y: newY, w: newW, h: newH };
+}
+
 // Export getMarkerPosition for use by other components
 export { getMarkerPosition, initProjection } from '../lib/projection.js';
 
@@ -122,11 +194,17 @@ export class MapSvg {
   private wasDragging: boolean = false;
   private dragStartScreenPos: { x: number; y: number } | null = null;
   private dragStartViewBox: ViewBoxRect | null = null;
-  private activePointerId: number | null = null;
   private boundPointerDown: ((e: PointerEvent) => void) | null = null;
   private boundPointerMove: ((e: PointerEvent) => void) | null = null;
   private boundPointerUp: ((e: PointerEvent) => void) | null = null;
   private boundClickCapture: ((e: MouseEvent) => void) | null = null;
+
+  // Multi-pointer / pinch state
+  private pointers: Map<number, PointerPoint> = new Map();
+  private isPinching: boolean = false;
+  private wasPinching: boolean = false;
+  private pinchStartPointers: [PointerPoint, PointerPoint] | null = null;
+  private pinchStartViewBox: ViewBoxRect | null = null;
 
   // Race condition fix: track marker initialization state
   private markersReady: boolean = false;
@@ -209,8 +287,9 @@ export class MapSvg {
     this.boundPointerMove = (e: PointerEvent) => this.handlePointerMove(e);
     this.boundPointerUp = (e: PointerEvent) => this.handlePointerUp(e);
     this.boundClickCapture = (e: MouseEvent) => {
-      if (this.wasDragging) {
+      if (this.wasDragging || this.wasPinching) {
         this.wasDragging = false;
+        this.wasPinching = false;
         e.stopPropagation();
         e.preventDefault();
       }
@@ -525,23 +604,71 @@ export class MapSvg {
   }
 
   private handlePointerDown(event: PointerEvent): void {
-    if (!event.isPrimary || event.button !== 0) return;
+    // Track all pointers (no isPrimary filter — needed for multi-touch)
+    if (event.button !== 0) return;
 
-    this.dragStartScreenPos = { x: event.clientX, y: event.clientY };
-    this.dragStartViewBox = { ...this.currentViewBox };
-    this.isDragging = false;
-    this.wasDragging = false;
-    this.activePointerId = event.pointerId;
+    this.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
 
-    // Cancel any in-progress viewBox animation
-    if (this.viewBoxAnimationId !== null) {
-      cancelAnimationFrame(this.viewBoxAnimationId);
-      this.viewBoxAnimationId = null;
+    if (this.pointers.size === 1) {
+      // Single pointer: prepare for drag
+      this.dragStartScreenPos = { x: event.clientX, y: event.clientY };
+      this.dragStartViewBox = { ...this.currentViewBox };
+      this.isDragging = false;
+      this.wasDragging = false;
+      this.wasPinching = false;
+
+      // Cancel any in-progress viewBox animation
+      if (this.viewBoxAnimationId !== null) {
+        cancelAnimationFrame(this.viewBoxAnimationId);
+        this.viewBoxAnimationId = null;
+      }
+    } else if (this.pointers.size >= 2) {
+      // Two+ pointers: enter pinch mode, cancel any active drag
+      this.isDragging = false;
+      this.container.style.cursor = 'grab';
+
+      const pts = Array.from(this.pointers.values());
+      this.pinchStartPointers = [{ ...pts[0] }, { ...pts[1] }];
+      this.pinchStartViewBox = { ...this.currentViewBox };
+      this.isPinching = true;
     }
   }
 
   private handlePointerMove(event: PointerEvent): void {
-    if (event.pointerId !== this.activePointerId) return;
+    if (!this.pointers.has(event.pointerId)) return;
+
+    // Update pointer position
+    this.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+    if (
+      this.isPinching &&
+      this.pointers.size >= 2 &&
+      this.pinchStartPointers &&
+      this.pinchStartViewBox
+    ) {
+      // Pinch-to-zoom
+      const pts = Array.from(this.pointers.values());
+      const currentPointers: [PointerPoint, PointerPoint] = [pts[0], pts[1]];
+
+      const newViewBox = computePinchZoomedViewBox(
+        this.pinchStartViewBox,
+        this.pinchStartPointers,
+        currentPointers,
+        { width: this.container.clientWidth, height: this.container.clientHeight }
+      );
+
+      this.currentViewBox = newViewBox;
+      if (this.svgElement) {
+        this.svgElement.setAttribute(
+          'viewBox',
+          `${newViewBox.x} ${newViewBox.y} ${newViewBox.w} ${newViewBox.h}`
+        );
+      }
+      return;
+    }
+
+    // Single-pointer drag (only if not pinching/wasPinching)
+    if (this.pointers.size !== 1 || this.isPinching || this.wasPinching) return;
     if (!this.dragStartScreenPos || !this.dragStartViewBox) return;
 
     const deltaX = event.clientX - this.dragStartScreenPos.x;
@@ -553,9 +680,7 @@ export class MapSvg {
     if (!this.isDragging) {
       this.isDragging = true;
       this.container.style.cursor = 'grabbing';
-      if (this.activePointerId !== null) {
-        this.container.setPointerCapture(this.activePointerId);
-      }
+      this.container.setPointerCapture(event.pointerId);
     }
 
     // Compute new viewBox from drag start (cumulative, not incremental)
@@ -576,18 +701,29 @@ export class MapSvg {
   }
 
   private handlePointerUp(event: PointerEvent): void {
-    if (event.pointerId !== this.activePointerId) return;
+    if (!this.pointers.has(event.pointerId)) return;
 
-    if (this.isDragging) {
+    this.pointers.delete(event.pointerId);
+
+    if (this.isPinching) {
+      if (this.pointers.size < 2) {
+        // Going from 2→1 or 2→0: end pinch, set wasPinching to suppress accidental tap
+        this.isPinching = false;
+        this.wasPinching = true;
+        this.pinchStartPointers = null;
+        this.pinchStartViewBox = null;
+      }
+    } else if (this.isDragging) {
       this.wasDragging = true;
     }
 
-    // Reset drag state
-    this.isDragging = false;
-    this.dragStartScreenPos = null;
-    this.dragStartViewBox = null;
-    this.activePointerId = null;
-    this.container.style.cursor = 'grab';
+    if (this.pointers.size === 0) {
+      // All pointers gone: reset state
+      this.isDragging = false;
+      this.dragStartScreenPos = null;
+      this.dragStartViewBox = null;
+      this.container.style.cursor = 'grab';
+    }
   }
 
   private animateViewBox(x: number, y: number, width: number, height: number): void {

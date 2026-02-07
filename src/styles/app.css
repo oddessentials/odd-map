@@ -24,6 +24,9 @@ body {
   position: sticky;
   top: 0;
   height: var(--header-height);
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
   background: var(--color-primary);
   color: var(--color-text-inverse);
   z-index: var(--z-header);
@@ -59,6 +62,7 @@ body {
   background: var(--color-bg-alt);
   border-top: 1px solid var(--color-border);
   padding: var(--space-4) var(--space-6);
+  padding-bottom: max(var(--space-4), env(safe-area-inset-bottom, 0px));
 }
 
 .footer-inner {
@@ -659,10 +663,10 @@ body {
 
 .map-expand-dialog {
   position: fixed;
-  top: 5vh;
-  left: 5vw;
-  right: 5vw;
-  bottom: 5vh;
+  top: max(5vh, env(safe-area-inset-top, 0px));
+  left: max(5vw, env(safe-area-inset-left, 0px));
+  right: max(5vw, env(safe-area-inset-right, 0px));
+  bottom: max(5vh, env(safe-area-inset-bottom, 0px));
   background: var(--color-bg, #fff);
   border-radius: var(--radius-lg, 12px);
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
@@ -973,6 +977,7 @@ body {
     min-height: 0;
   }
 
+  /* Bottom sheet (right sidebar on mobile) */
   .sidebar-right {
     position: fixed;
     bottom: 0;
@@ -980,18 +985,77 @@ body {
     right: 0;
     max-height: 40vh;
     border-left: none;
-    border-top: 1px solid var(--color-border);
+    border-top: none;
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-    box-shadow: var(--shadow-xl);
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
     z-index: var(--z-panel);
     transform: translateY(100%);
     transition: transform var(--transition-normal);
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    padding-bottom: max(var(--space-4), env(safe-area-inset-bottom, 0px));
+    padding-top: calc(var(--space-4) + 12px);
+    will-change: transform;
+  }
+
+  /* Drag handle pill */
+  .sidebar-right::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 36px;
+    height: 4px;
+    background: var(--color-border, #d1d5db);
+    border-radius: 2px;
   }
 
   .sidebar-right.open {
     transform: translateY(0);
+  }
+
+  /* Hide breadcrumb on mobile — header too tight */
+  .breadcrumb {
+    display: none;
+  }
+
+  /* Touch target minimums (44×44px per WCAG / Apple HIG) */
+  .sidebar-left .region-btn {
+    min-height: 44px;
+  }
+
+  .panel-close {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .mini-map-expand-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .mode-btn {
+    min-height: 44px;
+  }
+
+  .office-btn {
+    min-height: 44px;
+  }
+
+  .map-expand-close-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .office-modal-close {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .reset-btn {
+    min-height: 44px;
   }
 
   .specialty-accordion {
@@ -1323,6 +1387,7 @@ body {
 
 .office-modal-footer {
   padding: var(--space-4, 16px);
+  padding-bottom: max(var(--space-4, 16px), env(safe-area-inset-bottom, 0px));
   border-top: 1px solid var(--color-border, #e5e7eb);
 }
 

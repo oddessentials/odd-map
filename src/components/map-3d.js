@@ -552,7 +552,7 @@ export class Map3D {
     this._boundOnResize = () => this.onResize();
     this._boundOnWheel = (e) => this.handleWheel(e);
 
-    this.container.addEventListener('mousemove', this._boundOnMouseMove);
+    this.container.addEventListener('pointermove', this._boundOnMouseMove);
     this.container.addEventListener('click', this._boundOnClick);
     window.addEventListener('resize', this._boundOnResize);
     this.container.addEventListener('wheel', this._boundOnWheel, { passive: false });
@@ -1079,7 +1079,7 @@ export class Map3D {
         window.removeEventListener('resize', this._boundOnResize);
       }
       if (this._boundOnMouseMove && this.container) {
-        this.container.removeEventListener('mousemove', this._boundOnMouseMove);
+        this.container.removeEventListener('pointermove', this._boundOnMouseMove);
       }
       if (this._boundOnClick && this.container) {
         this.container.removeEventListener('click', this._boundOnClick);
