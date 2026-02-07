@@ -13,6 +13,7 @@ export class DetailsPanel {
     this.container = container;
     this.options = {
       onClose: options.onClose || (() => {}),
+      onOfficeClick: options.onOfficeClick || null,
     };
 
     this.currentOffice = null;
@@ -53,11 +54,15 @@ export class DetailsPanel {
     this.closeBtn.addEventListener('click', () => {
       this.options.onClose();
     });
+
+    // Hide close button in initial placeholder state (no-op when nothing selected)
+    this.closeBtn.classList.add('panel-close--hidden');
   }
 
   showRegion(region) {
     this.currentRegion = region;
     this.currentOffice = null;
+    this.closeBtn.classList.remove('panel-close--hidden');
 
     this.titleEl.textContent = region.name;
 
@@ -117,7 +122,11 @@ export class DetailsPanel {
         const code = btn.closest('.office-item').dataset.officeCode;
         const office = offices.find((o) => o.officeCode === code);
         if (office) {
-          this.showOffice(office, region);
+          if (this.options.onOfficeClick) {
+            this.options.onOfficeClick(office, region);
+          } else {
+            this.showOffice(office, region);
+          }
         }
       });
     });
@@ -128,6 +137,7 @@ export class DetailsPanel {
   showOffice(office, region) {
     this.currentOffice = office;
     this.currentRegion = region;
+    this.closeBtn.classList.remove('panel-close--hidden');
 
     this.titleEl.textContent = `${office.city}, ${office.state}`;
 
@@ -247,6 +257,7 @@ export class DetailsPanel {
     this.titleEl.textContent = 'Select a Location';
     this.bodyEl.innerHTML = '<p class="panel-placeholder"></p>';
     this.bodyEl.querySelector('.panel-placeholder').textContent = message;
+    this.closeBtn.classList.add('panel-close--hidden');
   }
 
   close() {

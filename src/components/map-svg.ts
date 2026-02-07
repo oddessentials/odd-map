@@ -27,6 +27,9 @@ const ZOOM_OUT_FACTOR = 1.1;
 const MIN_VIEWBOX_WIDTH = 60; // Maximum zoom (~16x)
 const MAX_VIEWBOX_WIDTH = MAP_WIDTH; // Minimum zoom (full view)
 
+// Drag-pan constants
+const DRAG_THRESHOLD = 5; // Pixels of movement before drag mode activates
+
 /** ViewBox dimensions for zoom calculations */
 export interface ViewBoxRect {
   x: number;
@@ -68,6 +71,36 @@ export function computeZoomedViewBox(
   return { x: newX, y: newY, w: newW, h: newH };
 }
 
+/**
+ * Compute a new viewBox after a drag-pan gesture.
+ * Pure function — no DOM dependencies, exported for testability.
+ *
+ * Converts screen pixel delta to SVG coordinate delta, then translates the
+ * viewBox origin. Width and height are unchanged — pan does not zoom.
+ * The origin is clamped so the viewBox never extends outside [0, 0, MAP_WIDTH, MAP_HEIGHT].
+ */
+export function computeDragPannedViewBox(
+  startViewBox: ViewBoxRect,
+  screenDelta: { dx: number; dy: number },
+  containerSize: { width: number; height: number }
+): ViewBoxRect {
+  if (containerSize.width <= 0 || containerSize.height <= 0) return { ...startViewBox };
+
+  // Convert screen delta to SVG delta
+  const svgDeltaX = screenDelta.dx * (startViewBox.w / containerSize.width);
+  const svgDeltaY = screenDelta.dy * (startViewBox.h / containerSize.height);
+
+  // Translate origin (subtract so map follows cursor direction)
+  let newX = startViewBox.x - svgDeltaX;
+  let newY = startViewBox.y - svgDeltaY;
+
+  // Clamp to map boundaries
+  newX = Math.max(0, Math.min(MAP_WIDTH - startViewBox.w, newX));
+  newY = Math.max(0, Math.min(MAP_HEIGHT - startViewBox.h, newY));
+
+  return { x: newX, y: newY, w: startViewBox.w, h: startViewBox.h };
+}
+
 // Export getMarkerPosition for use by other components
 export { getMarkerPosition, initProjection } from '../lib/projection.js';
 
@@ -83,6 +116,17 @@ export class MapSvg {
   private currentViewBox = { x: 0, y: 0, w: MAP_WIDTH, h: MAP_HEIGHT };
   private viewBoxAnimationId: number | null = null;
   private boundHandleWheel: ((e: WheelEvent) => void) | null = null;
+
+  // Drag-pan state
+  private isDragging: boolean = false;
+  private wasDragging: boolean = false;
+  private dragStartScreenPos: { x: number; y: number } | null = null;
+  private dragStartViewBox: ViewBoxRect | null = null;
+  private activePointerId: number | null = null;
+  private boundPointerDown: ((e: PointerEvent) => void) | null = null;
+  private boundPointerMove: ((e: PointerEvent) => void) | null = null;
+  private boundPointerUp: ((e: PointerEvent) => void) | null = null;
+  private boundClickCapture: ((e: MouseEvent) => void) | null = null;
 
   // Race condition fix: track marker initialization state
   private markersReady: boolean = false;
@@ -159,6 +203,24 @@ export class MapSvg {
     // Register scroll-wheel zoom handler
     this.boundHandleWheel = (e: WheelEvent) => this.handleWheel(e);
     this.container.addEventListener('wheel', this.boundHandleWheel, { passive: false });
+
+    // Register pointer event listeners for drag-pan
+    this.boundPointerDown = (e: PointerEvent) => this.handlePointerDown(e);
+    this.boundPointerMove = (e: PointerEvent) => this.handlePointerMove(e);
+    this.boundPointerUp = (e: PointerEvent) => this.handlePointerUp(e);
+    this.boundClickCapture = (e: MouseEvent) => {
+      if (this.wasDragging) {
+        this.wasDragging = false;
+        e.stopPropagation();
+        e.preventDefault();
+      }
+    };
+
+    this.container.addEventListener('pointerdown', this.boundPointerDown);
+    this.container.addEventListener('pointermove', this.boundPointerMove);
+    this.container.addEventListener('pointerup', this.boundPointerUp);
+    this.container.addEventListener('pointercancel', this.boundPointerUp);
+    this.container.addEventListener('click', this.boundClickCapture, { capture: true });
   }
 
   /**
@@ -172,6 +234,23 @@ export class MapSvg {
     if (this.boundHandleWheel) {
       this.container.removeEventListener('wheel', this.boundHandleWheel);
       this.boundHandleWheel = null;
+    }
+    if (this.boundPointerDown) {
+      this.container.removeEventListener('pointerdown', this.boundPointerDown);
+      this.boundPointerDown = null;
+    }
+    if (this.boundPointerMove) {
+      this.container.removeEventListener('pointermove', this.boundPointerMove);
+      this.boundPointerMove = null;
+    }
+    if (this.boundPointerUp) {
+      this.container.removeEventListener('pointerup', this.boundPointerUp);
+      this.container.removeEventListener('pointercancel', this.boundPointerUp);
+      this.boundPointerUp = null;
+    }
+    if (this.boundClickCapture) {
+      this.container.removeEventListener('click', this.boundClickCapture, { capture: true });
+      this.boundClickCapture = null;
     }
   }
 
@@ -445,6 +524,72 @@ export class MapSvg {
     svg.setAttribute('viewBox', `${newViewBox.x} ${newViewBox.y} ${newViewBox.w} ${newViewBox.h}`);
   }
 
+  private handlePointerDown(event: PointerEvent): void {
+    if (!event.isPrimary || event.button !== 0) return;
+
+    this.dragStartScreenPos = { x: event.clientX, y: event.clientY };
+    this.dragStartViewBox = { ...this.currentViewBox };
+    this.isDragging = false;
+    this.wasDragging = false;
+    this.activePointerId = event.pointerId;
+
+    // Cancel any in-progress viewBox animation
+    if (this.viewBoxAnimationId !== null) {
+      cancelAnimationFrame(this.viewBoxAnimationId);
+      this.viewBoxAnimationId = null;
+    }
+  }
+
+  private handlePointerMove(event: PointerEvent): void {
+    if (event.pointerId !== this.activePointerId) return;
+    if (!this.dragStartScreenPos || !this.dragStartViewBox) return;
+
+    const deltaX = event.clientX - this.dragStartScreenPos.x;
+    const deltaY = event.clientY - this.dragStartScreenPos.y;
+
+    // Check drag threshold
+    if (!this.isDragging && Math.hypot(deltaX, deltaY) <= DRAG_THRESHOLD) return;
+
+    if (!this.isDragging) {
+      this.isDragging = true;
+      this.container.style.cursor = 'grabbing';
+      if (this.activePointerId !== null) {
+        this.container.setPointerCapture(this.activePointerId);
+      }
+    }
+
+    // Compute new viewBox from drag start (cumulative, not incremental)
+    const newViewBox = computeDragPannedViewBox(
+      this.dragStartViewBox,
+      { dx: deltaX, dy: deltaY },
+      { width: this.container.clientWidth, height: this.container.clientHeight }
+    );
+
+    // Apply immediately
+    this.currentViewBox = newViewBox;
+    if (this.svgElement) {
+      this.svgElement.setAttribute(
+        'viewBox',
+        `${newViewBox.x} ${newViewBox.y} ${newViewBox.w} ${newViewBox.h}`
+      );
+    }
+  }
+
+  private handlePointerUp(event: PointerEvent): void {
+    if (event.pointerId !== this.activePointerId) return;
+
+    if (this.isDragging) {
+      this.wasDragging = true;
+    }
+
+    // Reset drag state
+    this.isDragging = false;
+    this.dragStartScreenPos = null;
+    this.dragStartViewBox = null;
+    this.activePointerId = null;
+    this.container.style.cursor = 'grab';
+  }
+
   private animateViewBox(x: number, y: number, width: number, height: number): void {
     const svg = this.svgElement;
     if (!svg) return;
@@ -557,6 +702,7 @@ export class MapSvg {
       marker.classList.toggle('marker--selected', state.selected);
       marker.classList.toggle('marker--highlighted', state.highlighted);
       marker.classList.toggle('marker--dimmed', state.dimmed);
+      marker.classList.toggle('marker--subdued', state.subdued);
     }
   }
 

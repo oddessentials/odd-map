@@ -135,6 +135,85 @@ describe('Marker State Manager', () => {
     });
   });
 
+  describe('Contract Assertion 6: Subdued state for same-region non-selected markers', () => {
+    it('same-region non-selected markers are subdued when office is selected', () => {
+      const offices: MarkerOffice[] = [
+        createOffice('TST PA1', 'Northeast Region'),
+        createOffice('TST PA2', 'Northeast Region'),
+        createOffice('TST FL1', 'Southeast Region'),
+      ];
+
+      const input: MarkerStateInput = {
+        allOffices: offices,
+        selectedRegion: 'Northeast Region',
+        selectedOfficeCode: 'TST PA1',
+        hoveredOfficeCode: null,
+      };
+
+      const states = computeMarkerStates(input);
+
+      const selected = states.find((s) => s.officeCode === 'TST PA1')!;
+      const sameRegion = states.find((s) => s.officeCode === 'TST PA2')!;
+      const outOfRegion = states.find((s) => s.officeCode === 'TST FL1')!;
+
+      expect(selected.subdued).toBe(false);
+      expect(selected.selected).toBe(true);
+
+      expect(sameRegion.subdued).toBe(true);
+      expect(sameRegion.dimmed).toBe(false);
+
+      expect(outOfRegion.subdued).toBe(false);
+      expect(outOfRegion.dimmed).toBe(true);
+    });
+
+    it('no markers subdued in region view (no office selected)', () => {
+      const input: MarkerStateInput = {
+        allOffices: OFFICES,
+        selectedRegion: 'Northeast Region',
+        selectedOfficeCode: null,
+        hoveredOfficeCode: null,
+      };
+
+      const states = computeMarkerStates(input);
+      states.forEach((state) => {
+        expect(state.subdued).toBe(false);
+      });
+    });
+
+    it('no markers subdued in USA view (nothing selected)', () => {
+      const input: MarkerStateInput = {
+        allOffices: OFFICES,
+        selectedRegion: null,
+        selectedOfficeCode: null,
+        hoveredOfficeCode: null,
+      };
+
+      const states = computeMarkerStates(input);
+      states.forEach((state) => {
+        expect(state.subdued).toBe(false);
+      });
+    });
+
+    it('subdued and dimmed are mutually exclusive', () => {
+      const input: MarkerStateInput = {
+        allOffices: OFFICES,
+        selectedRegion: 'Northeast Region',
+        selectedOfficeCode: 'TST PA1',
+        hoveredOfficeCode: null,
+      };
+
+      const states = computeMarkerStates(input);
+      states.forEach((state) => {
+        if (state.subdued) {
+          expect(state.dimmed).toBe(false);
+        }
+        if (state.dimmed) {
+          expect(state.subdued).toBe(false);
+        }
+      });
+    });
+  });
+
   describe('Edge cases', () => {
     it('handles empty offices array', () => {
       const input: MarkerStateInput = {

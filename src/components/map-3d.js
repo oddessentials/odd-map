@@ -39,6 +39,10 @@ const ATMOSPHERE_SCALE = 1.15;
 // Scroll-wheel rotation constant (radians per scroll tick)
 const SCROLL_ROTATION_STEP = 0.05;
 
+// Drag-rotation constants
+const DRAG_ROTATION_SENSITIVITY = 0.005; // Radians per pixel of horizontal drag
+const DRAG_THRESHOLD = 5; // Pixels of movement before drag mode activates
+
 /**
  * Compute the globe rotation delta for a scroll-wheel event.
  * Pure function — exported for testability.
@@ -54,6 +58,22 @@ export function computeScrollRotationDelta(deltaY) {
   const sign = Math.sign(deltaY);
   if (sign === 0) return 0;
   return -sign * SCROLL_ROTATION_STEP;
+}
+
+/**
+ * Compute the globe rotation delta for a drag gesture.
+ * Pure function — exported for testability.
+ *
+ * Drag left (negative deltaX) → positive rotation (globe turns left).
+ * Drag right (positive deltaX) → negative rotation (globe turns right).
+ * Linear mapping: radians = -deltaX * DRAG_ROTATION_SENSITIVITY.
+ *
+ * @param {number} deltaX - Horizontal pixel delta (event.clientX difference)
+ * @returns {number} Rotation delta in radians to add to globeGroup.rotation.y
+ */
+export function computeDragRotationDelta(deltaX) {
+  if (deltaX === 0) return 0;
+  return -deltaX * DRAG_ROTATION_SENSITIVITY;
 }
 
 // Backface culling hysteresis thresholds (prevents flickering at visibility boundary)
@@ -228,6 +248,17 @@ export class Map3D {
     this._boundOnMouseMove = null;
     this._boundOnClick = null;
     this._boundOnWheel = null;
+
+    // Drag-rotation state
+    this.isDragging = false;
+    this.wasDragging = false;
+    this.dragStartX = null;
+    this.dragStartY = null;
+    this.previousX = null;
+    this.autoRotateWasEnabled = false;
+    this._boundPointerDown = null;
+    this._boundPointerMove = null;
+    this._boundPointerUp = null;
 
     // Performance: reusable vectors (object pooling)
     this._tempVectors = {
@@ -525,6 +556,16 @@ export class Map3D {
     this.container.addEventListener('click', this._boundOnClick);
     window.addEventListener('resize', this._boundOnResize);
     this.container.addEventListener('wheel', this._boundOnWheel, { passive: false });
+
+    // Pointer event listeners for drag-rotation
+    this._boundPointerDown = (e) => this.handlePointerDown(e);
+    this._boundPointerMove = (e) => this.handlePointerMove(e);
+    this._boundPointerUp = (e) => this.handlePointerUp(e);
+
+    this.container.addEventListener('pointerdown', this._boundPointerDown);
+    this.container.addEventListener('pointermove', this._boundPointerMove);
+    this.container.addEventListener('pointerup', this._boundPointerUp);
+    this.container.addEventListener('pointercancel', this._boundPointerUp);
   }
 
   /**
@@ -541,6 +582,61 @@ export class Map3D {
     if (delta === 0) return;
 
     this.globeGroup.rotation.y += delta;
+  }
+
+  handlePointerDown(event) {
+    if (!event.isPrimary || event.button !== 0) return;
+
+    this.dragStartX = event.clientX;
+    this.dragStartY = event.clientY;
+    this.previousX = event.clientX;
+    this.isDragging = false;
+    this.wasDragging = false;
+    this.autoRotateWasEnabled = this.autoRotate;
+    this.container.setPointerCapture(event.pointerId);
+  }
+
+  handlePointerMove(event) {
+    if (!event.isPrimary || this.dragStartX === null) return;
+
+    const totalDeltaX = event.clientX - this.dragStartX;
+    const totalDeltaY = event.clientY - this.dragStartY;
+
+    // Check drag threshold (2D distance so vertical drags also activate drag mode)
+    if (!this.isDragging && Math.hypot(totalDeltaX, totalDeltaY) <= DRAG_THRESHOLD) return;
+
+    if (!this.isDragging) {
+      this.isDragging = true;
+      this.autoRotate = false;
+      this.container.style.cursor = 'grabbing';
+    }
+
+    // Incremental delta for smooth rotation
+    const incrementalDeltaX = event.clientX - this.previousX;
+    this.previousX = event.clientX;
+
+    if (this.globeGroup) {
+      this.globeGroup.rotation.y += computeDragRotationDelta(incrementalDeltaX);
+    }
+  }
+
+  handlePointerUp(event) {
+    if (!event.isPrimary) return;
+
+    if (this.isDragging) {
+      this.wasDragging = true;
+      // Resume auto-rotation if it was enabled before drag and user still wants it
+      if (this.autoRotateWasEnabled && this.userWantsAutoRotate) {
+        this.autoRotate = true;
+      }
+    }
+
+    // Reset drag state
+    this.isDragging = false;
+    this.dragStartX = null;
+    this.dragStartY = null;
+    this.previousX = null;
+    this.container.style.cursor = '';
   }
 
   /**
@@ -641,6 +737,12 @@ export class Map3D {
   }
 
   onClick(_event) {
+    // Suppress click after a drag gesture
+    if (this.wasDragging) {
+      this.wasDragging = false;
+      return;
+    }
+
     // IMPORTANT: Only respond to clicks on interactive objects
     if (!this.hoveredMesh) return;
 
@@ -736,6 +838,19 @@ export class Map3D {
           if (child.material && !child.userData.isGlow) {
             child.material.transparent = true;
             child.material.opacity = 0.3;
+          }
+          if (child.userData.isGlow) {
+            child.material.opacity = 0;
+          }
+        });
+        continue;
+      }
+
+      if (state.subdued) {
+        marker.children.forEach((child) => {
+          if (child.material && !child.userData.isGlow) {
+            child.material.transparent = true;
+            child.material.opacity = 0.55;
           }
           if (child.userData.isGlow) {
             child.material.opacity = 0;
@@ -971,6 +1086,16 @@ export class Map3D {
       }
       if (this._boundOnWheel && this.container) {
         this.container.removeEventListener('wheel', this._boundOnWheel);
+      }
+      if (this._boundPointerDown && this.container) {
+        this.container.removeEventListener('pointerdown', this._boundPointerDown);
+      }
+      if (this._boundPointerMove && this.container) {
+        this.container.removeEventListener('pointermove', this._boundPointerMove);
+      }
+      if (this._boundPointerUp && this.container) {
+        this.container.removeEventListener('pointerup', this._boundPointerUp);
+        this.container.removeEventListener('pointercancel', this._boundPointerUp);
       }
 
       // Dispose tooltip

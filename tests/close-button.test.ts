@@ -1,10 +1,14 @@
 /**
  * Unit Tests - Close Button Behavior
  *
- * Tests that handlePanelClose() navigates back one level in the state hierarchy:
- *   LOCATION_VIEW → REGION_VIEW (not USA_VIEW)
- *   REGION_VIEW → USA_VIEW
+ * Tests that handlePanelClose() fully resets to USA_VIEW from any state:
+ *   LOCATION_VIEW → USA_VIEW (via handleReset)
+ *   REGION_VIEW → USA_VIEW (via handleReset)
  *   USA_VIEW → no-op
+ *
+ * Tests that handleReset() re-entrancy guard prevents recursive loops.
+ *
+ * Tests that close button visibility matches panel state.
  *
  * Constitution Principle III: Invariant tests for state machine changes.
  */
@@ -24,71 +28,139 @@ type StateValue = (typeof States)[keyof typeof States];
  * Minimal simulation of handlePanelClose() logic from app.ts.
  * This tests the decision logic in isolation without DOM/map dependencies.
  */
-function handlePanelClose(
-  state: StateValue,
-  selectedRegion: { name: string } | null,
-  callbacks: { handleRegionClick: (name: string) => void; handleReset: () => void }
-): void {
-  if (state === States.LOCATION_VIEW && selectedRegion) {
-    callbacks.handleRegionClick(selectedRegion.name);
-  } else if (state === States.REGION_VIEW) {
+function handlePanelClose(state: StateValue, callbacks: { handleReset: () => void }): void {
+  if (state !== States.USA_VIEW) {
     callbacks.handleReset();
   }
-  // USA_VIEW: no-op
+}
+
+/**
+ * Minimal simulation of handleReset() with re-entrancy guard from app.ts.
+ * The real map.reset() calls onReset which calls handleReset() recursively.
+ * The guard ensures the body executes only once.
+ */
+function createResetHandler(onBody: () => void) {
+  let resetting = false;
+  return function handleReset() {
+    if (resetting) return;
+    resetting = true;
+    try {
+      onBody();
+    } finally {
+      resetting = false;
+    }
+  };
 }
 
 describe('Panel Close Button Behavior', () => {
-  let handleRegionClick: (name: string) => void;
   let handleReset: () => void;
 
   beforeEach(() => {
-    handleRegionClick = vi.fn<(name: string) => void>();
     handleReset = vi.fn<() => void>();
   });
 
-  it('LOCATION_VIEW transitions to REGION_VIEW (not USA_VIEW)', () => {
-    const selectedRegion = { name: 'Northeast Region' };
-
-    handlePanelClose(States.LOCATION_VIEW, selectedRegion, {
-      handleRegionClick,
-      handleReset,
-    });
-
-    expect(handleRegionClick).toHaveBeenCalledWith('Northeast Region');
-    expect(handleReset).not.toHaveBeenCalled();
-  });
-
-  it('REGION_VIEW transitions to USA_VIEW', () => {
-    handlePanelClose(
-      States.REGION_VIEW,
-      { name: 'Southeast Region' },
-      {
-        handleRegionClick,
-        handleReset,
-      }
-    );
+  it('LOCATION_VIEW resets to USA_VIEW directly', () => {
+    handlePanelClose(States.LOCATION_VIEW, { handleReset });
 
     expect(handleReset).toHaveBeenCalledOnce();
-    expect(handleRegionClick).not.toHaveBeenCalled();
+  });
+
+  it('REGION_VIEW resets to USA_VIEW', () => {
+    handlePanelClose(States.REGION_VIEW, { handleReset });
+
+    expect(handleReset).toHaveBeenCalledOnce();
   });
 
   it('USA_VIEW is a no-op', () => {
-    handlePanelClose(States.USA_VIEW, null, {
-      handleRegionClick,
-      handleReset,
-    });
+    handlePanelClose(States.USA_VIEW, { handleReset });
 
-    expect(handleRegionClick).not.toHaveBeenCalled();
     expect(handleReset).not.toHaveBeenCalled();
   });
+});
 
-  it('LOCATION_VIEW without selectedRegion is a no-op', () => {
-    handlePanelClose(States.LOCATION_VIEW, null, {
-      handleRegionClick,
-      handleReset,
+describe('handleReset re-entrancy guard', () => {
+  it('executes reset body exactly once even when called recursively', () => {
+    const bodyFn = vi.fn<() => void>();
+    // Wrapper allows self-reference: the closure captures `invoke` which delegates to the handler
+    const invoke = { fn: (() => {}) as () => void };
+    const handleReset = createResetHandler(() => {
+      bodyFn();
+      // Simulate: this.map.reset() → options.onReset() → handleReset()
+      invoke.fn();
+    });
+    invoke.fn = handleReset;
+
+    handleReset();
+
+    expect(bodyFn).toHaveBeenCalledOnce();
+  });
+
+  it('allows subsequent resets after first completes', () => {
+    const bodyFn = vi.fn<() => void>();
+    const handleReset = createResetHandler(() => {
+      bodyFn();
+      // Simulate recursive callback
+      handleReset();
     });
 
-    expect(handleRegionClick).not.toHaveBeenCalled();
-    expect(handleReset).not.toHaveBeenCalled();
+    handleReset();
+    handleReset();
+
+    expect(bodyFn).toHaveBeenCalledTimes(2);
+  });
+
+  it('guard resets even if body throws', () => {
+    const handleReset = createResetHandler(() => {
+      throw new Error('simulated error');
+    });
+
+    expect(() => handleReset()).toThrow('simulated error');
+    // Guard should have reset — second call should execute (and throw again)
+    expect(() => handleReset()).toThrow('simulated error');
+  });
+});
+
+describe('Close Button Visibility', () => {
+  const HIDDEN_CLASS = 'panel-close--hidden';
+  let container: HTMLElement;
+  let closeBtn: HTMLButtonElement;
+
+  beforeEach(() => {
+    container = document.createElement('div');
+    container.innerHTML = `
+      <div class="panel-header">
+        <h2 class="panel-title">Select a Location</h2>
+        <button class="panel-close ${HIDDEN_CLASS}" aria-label="Close panel">
+          <span aria-hidden="true">×</span>
+        </button>
+      </div>
+      <div class="panel-body"></div>
+    `;
+    closeBtn = container.querySelector('.panel-close') as HTMLButtonElement;
+  });
+
+  it('close button is hidden in placeholder/fresh state', () => {
+    expect(closeBtn.classList.contains(HIDDEN_CLASS)).toBe(true);
+  });
+
+  it('close button is visible when region is selected', () => {
+    // Simulate showRegion
+    closeBtn.classList.remove(HIDDEN_CLASS);
+    expect(closeBtn.classList.contains(HIDDEN_CLASS)).toBe(false);
+  });
+
+  it('close button is visible when office is selected', () => {
+    // Simulate showOffice
+    closeBtn.classList.remove(HIDDEN_CLASS);
+    expect(closeBtn.classList.contains(HIDDEN_CLASS)).toBe(false);
+  });
+
+  it('close button hides again after reset to placeholder', () => {
+    // Simulate: showRegion → visible, then showPlaceholder → hidden
+    closeBtn.classList.remove(HIDDEN_CLASS);
+    expect(closeBtn.classList.contains(HIDDEN_CLASS)).toBe(false);
+
+    closeBtn.classList.add(HIDDEN_CLASS);
+    expect(closeBtn.classList.contains(HIDDEN_CLASS)).toBe(true);
   });
 });

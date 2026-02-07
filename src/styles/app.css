@@ -211,7 +211,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  touch-action: manipulation;
+  touch-action: none;
+  cursor: grab;
 }
 
 .map-container svg {
@@ -347,6 +348,10 @@ body {
   padding: var(--space-1) var(--space-2);
   font-size: var(--text-xl);
   line-height: 1;
+}
+
+.panel-close--hidden {
+  display: none;
 }
 
 .panel-body {
@@ -953,6 +958,10 @@ body {
 .marker--dimmed {
   opacity: 0.3;
   pointer-events: none;
+}
+
+.marker--subdued {
+  opacity: 0.55;
 }
 
 /* Removed infinite pulse animation - too distracting */

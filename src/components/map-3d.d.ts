@@ -51,4 +51,13 @@ export declare class Map3D {
  */
 export declare function computeScrollRotationDelta(deltaY: number): number;
 
+/**
+ * Compute the globe rotation delta for a drag gesture.
+ * Drag left (negative deltaX) → positive rotation (left).
+ * Drag right (positive deltaX) → negative rotation (right).
+ * @param deltaX - Horizontal pixel delta
+ * @returns Rotation delta in radians
+ */
+export declare function computeDragRotationDelta(deltaX: number): number;
+
 export declare function hasWebGL(): boolean;

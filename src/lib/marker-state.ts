@@ -34,6 +34,7 @@ export interface MarkerVisualState {
   selected: boolean;
   highlighted: boolean;
   dimmed: boolean;
+  subdued: boolean;
 }
 
 /**
@@ -52,5 +53,10 @@ export function computeMarkerStates(input: MarkerStateInput): MarkerVisualState[
     selected: office.officeCode === selectedOfficeCode,
     highlighted: office.officeCode === hoveredOfficeCode,
     dimmed: selectedRegion !== null && office.regionName !== selectedRegion,
+    subdued:
+      selectedOfficeCode !== null &&
+      selectedRegion !== null &&
+      office.regionName === selectedRegion &&
+      office.officeCode !== selectedOfficeCode,
   }));
 }
