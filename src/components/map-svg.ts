@@ -530,6 +530,7 @@ export class MapSvg {
     this.dragStartScreenPos = { x: event.clientX, y: event.clientY };
     this.dragStartViewBox = { ...this.currentViewBox };
     this.isDragging = false;
+    this.wasDragging = false;
     this.activePointerId = event.pointerId;
 
     // Cancel any in-progress viewBox animation

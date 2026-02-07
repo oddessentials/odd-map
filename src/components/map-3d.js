@@ -591,6 +591,7 @@ export class Map3D {
     this.dragStartY = event.clientY;
     this.previousX = event.clientX;
     this.isDragging = false;
+    this.wasDragging = false;
     this.autoRotateWasEnabled = this.autoRotate;
     this.container.setPointerCapture(event.pointerId);
   }
