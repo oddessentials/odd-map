@@ -60,7 +60,7 @@
     "us-atlas": "^3.0.1"
   },
   "devDependencies": {
-    "@commitlint/cli": "20.3.1",
+    "@commitlint/cli": "20.4.1",
     "@commitlint/config-conventional": "20.3.1",
     "@eslint/js": "9.39.2",
     "@oddessentials/repo-standards": "5.3.0",
