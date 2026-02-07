@@ -6,6 +6,7 @@ import type { Region, Office } from '../types/index.js';
 
 export interface DetailsPanelOptions {
   onClose?: () => void;
+  onOfficeClick?: ((office: Office, region: Region) => void) | null;
 }
 
 export declare class DetailsPanel {

@@ -699,6 +699,7 @@ export class MapSvg {
       marker.classList.toggle('marker--selected', state.selected);
       marker.classList.toggle('marker--highlighted', state.highlighted);
       marker.classList.toggle('marker--dimmed', state.dimmed);
+      marker.classList.toggle('marker--subdued', state.subdued);
     }
   }
 

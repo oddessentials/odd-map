@@ -53,6 +53,7 @@ class App {
   private selectedOffice: Office | null = null;
   private use3D: boolean;
   private transitioning: boolean = false;
+  private resetting: boolean = false;
 
   // Component instances
   private map: MapComponent | null = null;
@@ -174,6 +175,7 @@ class App {
     if (this.panelContainer) {
       this.panel = new DetailsPanel(this.panelContainer, {
         onClose: () => this.handlePanelClose(),
+        onOfficeClick: (office: Office, region: Region) => this.handleOfficeClick(office, region),
       });
     }
 
@@ -372,8 +374,8 @@ class App {
     this.selectedRegion = region;
     this.selectedOffice = null;
 
-    // Update URL hash
-    window.location.hash = `region=${encodeURIComponent(regionName)}`;
+    // Update URL hash (replaceState avoids triggering hashchange re-entrancy)
+    history.replaceState(null, '', `#region=${encodeURIComponent(regionName)}`);
 
     // Update components
     this.map?.selectRegion(regionName);
@@ -405,8 +407,8 @@ class App {
     this.selectedRegion = region;
     this.selectedOffice = office;
 
-    // Update URL hash
-    window.location.hash = `office=${encodeURIComponent(office.officeCode)}`;
+    // Update URL hash (replaceState avoids triggering hashchange re-entrancy)
+    history.replaceState(null, '', `#office=${encodeURIComponent(office.officeCode)}`);
 
     // Update components
     const officeWithRegion = ensureOfficeWithRegion(office, region.name);
@@ -418,29 +420,34 @@ class App {
   }
 
   private handlePanelClose(): void {
-    if (this.state === States.LOCATION_VIEW && this.selectedRegion) {
-      this.handleRegionClick(this.selectedRegion.name);
-    } else if (this.state === States.REGION_VIEW) {
+    if (this.state !== States.USA_VIEW) {
       this.handleReset();
     }
   }
 
   handleReset(): void {
-    this.state = States.USA_VIEW;
-    this.selectedRegion = null;
-    this.selectedOffice = null;
+    if (this.resetting) return;
+    this.resetting = true;
 
-    // Clear URL hash
-    history.pushState(null, '', window.location.pathname);
+    try {
+      this.state = States.USA_VIEW;
+      this.selectedRegion = null;
+      this.selectedOffice = null;
 
-    // Reset all components
-    this.map?.reset();
-    this.dispatchMarkerStates();
-    this.panel?.showPlaceholder();
-    this.panel?.close();
-    this.regionList?.reset();
+      // Clear URL hash
+      history.pushState(null, '', window.location.pathname);
 
-    this.updateUI();
+      // Reset all components (map.reset() triggers onReset callback back to here, guard prevents re-entrancy)
+      this.map?.reset();
+      this.dispatchMarkerStates();
+      this.panel?.showPlaceholder();
+      this.panel?.close();
+      this.regionList?.reset();
+
+      this.updateUI();
+    } finally {
+      this.resetting = false;
+    }
   }
 
   private handleHashChange(): void {

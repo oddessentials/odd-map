@@ -42,11 +42,11 @@ TypeScript 5.x (ES2022 target), JavaScript (map-3d.js): Follow standard conventi
 
 ## Recent Changes
 
-- 010-drag-pan-behavior: Added TypeScript 5.7 (ES2022 target), JavaScript (map-3d.js) + Three.js 0.182, Vite 7.3.1, Vitest 4.0.17
+- 011-fix-marker-panel-state: Added TypeScript 5.7 (ES2022 target), JavaScript (map-3d.js) + Three.js 0.182, Vite 7.3.1
 
 - 010-drag-pan-behavior: Added TypeScript 5.7 (ES2022 target), JavaScript (map-3d.js) + Three.js 0.182, Vite 7.3.1, Vitest 4.0.17
 
-- 009-scroll-wheel-behavior: Added TypeScript 5.7 (ES2022 target), JavaScript (map-3d.js) + Three.js 0.182, Vite 7.3.1, Vitest 4.0.17
+- 010-drag-pan-behavior: Added TypeScript 5.7 (ES2022 target), JavaScript (map-3d.js) + Three.js 0.182, Vite 7.3.1, Vitest 4.0.17
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->

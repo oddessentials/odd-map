@@ -354,6 +354,10 @@ body {
   line-height: 1;
 }
 
+.panel-close--hidden {
+  display: none;
+}
+
 .panel-body {
   flex: 1;
   overflow-y: auto;
@@ -958,6 +962,10 @@ body {
 .marker--dimmed {
   opacity: 0.3;
   pointer-events: none;
+}
+
+.marker--subdued {
+  opacity: 0.55;
 }
 
 /* Removed infinite pulse animation - too distracting */

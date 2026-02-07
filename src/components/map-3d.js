@@ -845,6 +845,19 @@ export class Map3D {
         continue;
       }
 
+      if (state.subdued) {
+        marker.children.forEach((child) => {
+          if (child.material && !child.userData.isGlow) {
+            child.material.transparent = true;
+            child.material.opacity = 0.55;
+          }
+          if (child.userData.isGlow) {
+            child.material.opacity = 0;
+          }
+        });
+        continue;
+      }
+
       // Reset opacity for markers coming out of dimmed state
       marker.children.forEach((child) => {
         if (child.material && !child.userData.isGlow) {
