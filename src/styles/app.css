@@ -211,7 +211,12 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  touch-action: manipulation;
+  touch-action: none;
+  cursor: grab;
+}
+
+.map-container.dragging {
+  cursor: grabbing;
 }
 
 .map-container svg {
