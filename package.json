@@ -63,7 +63,7 @@
     "@commitlint/cli": "20.3.1",
     "@commitlint/config-conventional": "20.3.1",
     "@eslint/js": "9.39.2",
-    "@oddessentials/repo-standards": "5.3.0",
+    "@oddessentials/repo-standards": "7.1.1",
     "@semantic-release/changelog": "6.0.3",
     "@semantic-release/git": "10.0.1",
     "@types/d3-geo": "^3.1.0",
