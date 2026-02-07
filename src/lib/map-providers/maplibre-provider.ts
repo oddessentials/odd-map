@@ -33,10 +33,10 @@ export class MapLibreProvider implements TileMapProvider {
   private markerClickHandler: ((officeCode: string) => void) | null = null;
   private markersSourceId = 'office-markers';
   private markersLoaded = false;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private markerEventHandlers: Array<{
     event: string;
     layer: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     handler: (...args: any[]) => void;
   }> = [];
 
@@ -345,19 +345,12 @@ export class MapLibreProvider implements TileMapProvider {
     if (!source) return;
 
     for (const state of states) {
-      // Find the feature ID by officeCode — use feature index matching
-      // MapLibre feature-state requires numeric IDs, so we set state by querying
-      const features = this.map.querySourceFeatures(this.markersSourceId, {
-        filter: ['==', ['get', 'officeCode'], state.officeCode],
-      });
-      for (const f of features) {
-        if (f.id != null) {
-          this.map.setFeatureState(
-            { source: this.markersSourceId, id: f.id },
-            { dimmed: state.dimmed, selected: state.selected, highlighted: state.highlighted }
-          );
-        }
-      }
+      // promoteId: 'officeCode' makes the officeCode property the feature ID,
+      // so we can call setFeatureState directly with string IDs (no query needed).
+      this.map.setFeatureState(
+        { source: this.markersSourceId, id: state.officeCode },
+        { dimmed: state.dimmed, selected: state.selected, highlighted: state.highlighted }
+      );
     }
   }
 

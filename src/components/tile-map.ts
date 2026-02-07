@@ -109,12 +109,15 @@ export class TileMap {
     const offices = getOfficesByRegion(regionName);
     if (offices.length === 0) return;
 
+    const brandColor =
+      getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() ||
+      '#00396c';
     const regionMarkers = offices.map((o) => ({
       officeCode: o.officeCode,
       lat: o.coordinates.lat,
       lon: o.coordinates.lon,
       label: `${o.city}, ${o.state}`,
-      color: '',
+      color: brandColor,
       regionName,
     }));
     this.provider.fitBounds(regionMarkers, 60);

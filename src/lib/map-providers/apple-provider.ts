@@ -191,9 +191,10 @@ export class AppleProvider implements TileMapProvider {
   setMarkers(markers: TileMapMarker[]): void {
     if (!this.map || !this.mk) return;
 
-    // Remove existing annotations (except the single-location marker)
+    // Remove all existing annotations (including single-location marker if present)
     if (this.map.annotations?.length > 0) {
       this.map.removeAnnotations(this.map.annotations);
+      this.marker = null;
     }
 
     const annotations = markers.map((m) => {
