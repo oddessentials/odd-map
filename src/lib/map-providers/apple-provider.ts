@@ -60,6 +60,8 @@ export class AppleProvider implements TileMapProvider {
   private mapContainer: HTMLElement | null = null;
   private token: string;
   private disposed = false;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private selectHandler: ((event: any) => void) | null = null;
 
   constructor(token: string) {
     this.token = token;
@@ -158,13 +160,21 @@ export class AppleProvider implements TileMapProvider {
     this.disposed = true;
 
     if (this.map) {
+      if (this.selectHandler) {
+        this.map.removeEventListener('select', this.selectHandler);
+        this.selectHandler = null;
+      }
       this.map.destroy();
       this.map = null;
     }
 
     this.marker = null;
     this.mk = null;
-    this.mapContainer = null;
+
+    if (this.mapContainer) {
+      this.mapContainer.remove();
+      this.mapContainer = null;
+    }
   }
 
   setMarkers(markers: TileMapMarker[]): void {
@@ -216,13 +226,17 @@ export class AppleProvider implements TileMapProvider {
 
   onMarkerClick(handler: (officeCode: string) => void): void {
     if (!this.map) return;
-    this.map.addEventListener(
-      'select',
-      (event: { annotation?: { title?: string; data?: { officeCode?: string } } }) => {
-        const code = event.annotation?.data?.officeCode;
-        if (code) handler(code);
-      }
-    );
+    // Remove previous listener if any
+    if (this.selectHandler) {
+      this.map.removeEventListener('select', this.selectHandler);
+    }
+    this.selectHandler = (event: {
+      annotation?: { title?: string; data?: { officeCode?: string } };
+    }) => {
+      const code = event.annotation?.data?.officeCode;
+      if (code) handler(code);
+    };
+    this.map.addEventListener('select', this.selectHandler);
   }
 
   getMapElement(): HTMLElement {

@@ -82,14 +82,16 @@ export class TileMap {
       getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() ||
       '#00396c';
 
-    this.markers = offices.map((office) => ({
-      officeCode: office.officeCode,
-      lat: office.coordinates.lat,
-      lon: office.coordinates.lon,
-      label: `${office.city}, ${office.state}`,
-      color: brandColor,
-      regionName: office.regionName,
-    }));
+    this.markers = offices
+      .filter((office) => office.coordinates)
+      .map((office) => ({
+        officeCode: office.officeCode,
+        lat: office.coordinates.lat,
+        lon: office.coordinates.lon,
+        label: `${office.city}, ${office.state}`,
+        color: brandColor,
+        regionName: office.regionName,
+      }));
 
     // Pass all markers to provider for clustered rendering
     this.provider.setMarkers(this.markers);

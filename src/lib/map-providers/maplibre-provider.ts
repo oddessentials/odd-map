@@ -198,9 +198,11 @@ export class MapLibreProvider implements TileMapProvider {
     }
 
     // Add GeoJSON source with clustering
+    // promoteId ensures each feature gets a stable ID for setFeatureState()
     this.map.addSource(this.markersSourceId, {
       type: 'geojson',
       data: geojson,
+      promoteId: 'officeCode',
       cluster: true,
       clusterMaxZoom: 14,
       clusterRadius: 50,
@@ -248,8 +250,9 @@ export class MapLibreProvider implements TileMapProvider {
     // Wire click handler for unclustered markers
     this.map.on('click', 'unclustered-point', (e) => {
       const feature = e.features?.[0];
-      if (feature && this.markerClickHandler) {
-        this.markerClickHandler(feature.properties?.officeCode);
+      const officeCode = feature?.properties?.officeCode;
+      if (typeof officeCode === 'string' && this.markerClickHandler) {
+        this.markerClickHandler(officeCode);
       }
     });
 

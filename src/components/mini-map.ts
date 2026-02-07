@@ -165,6 +165,13 @@ export class MiniMap {
       this.resizeObserver = null;
     }
 
+    // Remove WebGL context lost listener to prevent leaks
+    if (this.contextLostHandler) {
+      const canvas = this.mapWrapper.querySelector('canvas');
+      canvas?.removeEventListener('webglcontextlost', this.contextLostHandler);
+      this.contextLostHandler = null;
+    }
+
     if (this.provider) {
       this.provider.dispose();
       this.provider = null;
