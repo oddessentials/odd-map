@@ -3,6 +3,7 @@
 ## Overview
 
 This feature adds mouse scroll-wheel interactions to both map components:
+
 - **2D SVG map**: Scroll-wheel zooms in/out centered on cursor position
 - **3D globe**: Scroll-wheel rotates globe left/right (horizontal spin)
 
@@ -33,16 +34,16 @@ npm run lint
 
 ## Files to Modify
 
-| File | Change |
-| ---- | ------ |
-| `src/components/map-svg.ts` | Add `wheel` event listener and cursor-relative zoom logic |
-| `src/components/map-3d.js` | Add `wheel` event listener and scroll-driven Y-axis rotation |
+| File                        | Change                                                       |
+| --------------------------- | ------------------------------------------------------------ |
+| `src/components/map-svg.ts` | Add `wheel` event listener and cursor-relative zoom logic    |
+| `src/components/map-3d.js`  | Add `wheel` event listener and scroll-driven Y-axis rotation |
 
 ## Files to Create
 
-| File | Purpose |
-| ---- | ------- |
-| `tests/scroll-zoom-2d.test.ts` | Unit tests for 2D viewBox zoom calculations |
+| File                             | Purpose                                       |
+| -------------------------------- | --------------------------------------------- |
+| `tests/scroll-zoom-2d.test.ts`   | Unit tests for 2D viewBox zoom calculations   |
 | `tests/scroll-rotate-3d.test.ts` | Unit tests for 3D rotation delta calculations |
 
 ## Key Implementation Notes

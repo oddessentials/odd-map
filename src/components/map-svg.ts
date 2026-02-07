@@ -45,7 +45,7 @@ export interface ViewBoxRect {
 export function computeZoomedViewBox(
   current: ViewBoxRect,
   cursorSVG: { x: number; y: number },
-  zoomIn: boolean,
+  zoomIn: boolean
 ): ViewBoxRect {
   const factor = zoomIn ? ZOOM_IN_FACTOR : ZOOM_OUT_FACTOR;
 
@@ -455,7 +455,12 @@ export class MapSvg {
       this.viewBoxAnimationId = null;
     }
 
-    const current = [this.currentViewBox.x, this.currentViewBox.y, this.currentViewBox.w, this.currentViewBox.h];
+    const current = [
+      this.currentViewBox.x,
+      this.currentViewBox.y,
+      this.currentViewBox.w,
+      this.currentViewBox.h,
+    ];
     const target = [x, y, width, height];
 
     const duration = 500;
@@ -472,7 +477,12 @@ export class MapSvg {
       svg.setAttribute('viewBox', interpolated.join(' '));
 
       // Keep currentViewBox in sync
-      this.currentViewBox = { x: interpolated[0], y: interpolated[1], w: interpolated[2], h: interpolated[3] };
+      this.currentViewBox = {
+        x: interpolated[0],
+        y: interpolated[1],
+        w: interpolated[2],
+        h: interpolated[3],
+      };
 
       if (progress < 1) {
         this.viewBoxAnimationId = requestAnimationFrame(animate);

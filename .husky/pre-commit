@@ -1,6 +1,5 @@
 #!/usr/bin/env sh
-# Pre-commit: auto-fix and stage corrections on staged files only
-# Uses lint-staged for efficient, targeted fixes
-# Full verification (typecheck + tests) runs in pre-push
+# Pre-commit: auto-fix staged files (eslint --fix + prettier --write)
+# Full CI-equivalent verification runs in pre-push.
 
 npx lint-staged

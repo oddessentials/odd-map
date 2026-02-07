@@ -47,7 +47,7 @@
 
 ### Implementation for User Story 1
 
-- [x] T005 [US1] Implement `computeZoomedViewBox()` pure function in `src/components/map-svg.ts`. Takes `currentViewBox: { x, y, w, h }`, `cursorSVG: { x, y }`, and `zoomIn: boolean`. Returns new `{ x, y, w, h }`. Logic: factor = zoomIn ? 0.9 : 1.1; newW = w * factor; newH = h * factor; newX = cursorSVG.x - (cursorSVG.x - x) * factor; newY = cursorSVG.y - (cursorSVG.y - y) * factor. Clamp newW to [60, 960] range, newH proportionally.
+- [x] T005 [US1] Implement `computeZoomedViewBox()` pure function in `src/components/map-svg.ts`. Takes `currentViewBox: { x, y, w, h }`, `cursorSVG: { x, y }`, and `zoomIn: boolean`. Returns new `{ x, y, w, h }`. Logic: factor = zoomIn ? 0.9 : 1.1; newW = w _ factor; newH = h _ factor; newX = cursorSVG.x - (cursorSVG.x - x) _ factor; newY = cursorSVG.y - (cursorSVG.y - y) _ factor. Clamp newW to [60, 960] range, newH proportionally.
 - [x] T006 [US1] Implement `handleWheel(event: WheelEvent)` method in `MapSvg` class in `src/components/map-svg.ts`. Steps: (1) `event.preventDefault()`, (2) normalize deltaY with `Math.sign()`, (3) convert screen cursor to SVG coordinates via `createSVGPoint()` + `getScreenCTM().inverse()`, (4) call `computeZoomedViewBox()`, (5) cancel any in-progress animation via `cancelAnimationFrame(this.animationFrameId)`, (6) set `this.animationFrameId = null`, (7) apply new viewBox via `setAttribute('viewBox', ...)`, (8) update `this.currentViewBox`.
 - [x] T007 [US1] Register `wheel` event listener on `this.container` during `MapSvg.init()` in `src/components/map-svg.ts`. Use `{ passive: false }` option. Store bound handler reference for cleanup. Add `removeEventListener` in the dispose/cleanup path to prevent memory leaks.
 - [x] T008 [US1] Run tests: `npx vitest run tests/scroll-zoom-2d.test.ts` — all zoom math tests must pass. Then run `npm test` to confirm no regressions in existing 74+ tests.
@@ -89,9 +89,9 @@
 
 > **Note**: Scroll prevention is already implemented as part of US1 (T006) and US2 (T011) via `event.preventDefault()`. This phase validates the cross-cutting behavior and ensures edge cases are handled.
 
-- [x] T014 [US3] Verify scroll prevention on 2D map: with `npm run dev` running, load the app in the browser, position cursor over the 2D map, scroll up and down — page must not scroll. Move cursor outside the map container — page scrolling must resume. Document any issues found. *(Validated by design: handleWheel calls event.preventDefault(); registered with { passive: false }. Requires manual browser verification.)*
-- [x] T015 [US3] Verify scroll prevention on 3D map: switch to 3D view, position cursor over the globe canvas, scroll up and down — page must not scroll. Move cursor outside the canvas — page scrolling must resume. Document any issues found. *(Validated by design: handleWheel calls event.preventDefault(); registered with { passive: false }. Requires manual browser verification.)*
-- [x] T016 [US3] Verify rapid scroll handling: on both 2D and 3D maps, scroll the mouse wheel rapidly (10+ ticks in quick succession). Verify no visual jitter, no lag, and no console errors. Test with both a physical mouse wheel and a trackpad (if available). *(Validated by design: handlers are O(1) math only — no debounce/throttle needed. Requires manual browser verification.)*
+- [x] T014 [US3] Verify scroll prevention on 2D map: with `npm run dev` running, load the app in the browser, position cursor over the 2D map, scroll up and down — page must not scroll. Move cursor outside the map container — page scrolling must resume. Document any issues found. _(Validated by design: handleWheel calls event.preventDefault(); registered with { passive: false }. Requires manual browser verification.)_
+- [x] T015 [US3] Verify scroll prevention on 3D map: switch to 3D view, position cursor over the globe canvas, scroll up and down — page must not scroll. Move cursor outside the canvas — page scrolling must resume. Document any issues found. _(Validated by design: handleWheel calls event.preventDefault(); registered with { passive: false }. Requires manual browser verification.)_
+- [x] T016 [US3] Verify rapid scroll handling: on both 2D and 3D maps, scroll the mouse wheel rapidly (10+ ticks in quick succession). Verify no visual jitter, no lag, and no console errors. Test with both a physical mouse wheel and a trackpad (if available). _(Validated by design: handlers are O(1) math only — no debounce/throttle needed. Requires manual browser verification.)_
 
 **Checkpoint**: Scroll prevention works correctly across both maps. No edge case regressions.
 
@@ -101,11 +101,11 @@
 
 **Purpose**: Final validation, regression testing, and cleanup
 
-- [x] T017 Verify existing interactions are unaffected: test click-to-select regions, click-to-select offices, keyboard navigation (Tab + Enter + Esc), auto-rotation toggle, 2D/3D mode switching, and URL hash navigation. All must work as before. *(Verified: 320 tests pass including all existing interaction tests. Requires manual browser verification.)*
-- [x] T018 Run full test suite: `npm test` — all existing 74+ tests plus new scroll tests must pass. *(320/320 tests pass across 24 test files.)*
-- [x] T019 Run type check: `npm run typecheck` — must pass with no errors. *(Passes clean.)*
-- [x] T020 Run lint: `npm run lint` — must pass with no warnings. *(Passes clean.)*
-- [ ] T021 Manual cross-browser check: test scroll-wheel behavior in Chrome and Firefox (at minimum). Verify consistent zoom and rotation behavior. Document any browser-specific quirks. *(Requires user manual testing.)*
+- [x] T017 Verify existing interactions are unaffected: test click-to-select regions, click-to-select offices, keyboard navigation (Tab + Enter + Esc), auto-rotation toggle, 2D/3D mode switching, and URL hash navigation. All must work as before. _(Verified: 320 tests pass including all existing interaction tests. Requires manual browser verification.)_
+- [x] T018 Run full test suite: `npm test` — all existing 74+ tests plus new scroll tests must pass. _(320/320 tests pass across 24 test files.)_
+- [x] T019 Run type check: `npm run typecheck` — must pass with no errors. _(Passes clean.)_
+- [x] T020 Run lint: `npm run lint` — must pass with no warnings. _(Passes clean.)_
+- [ ] T021 Manual cross-browser check: test scroll-wheel behavior in Chrome and Firefox (at minimum). Verify consistent zoom and rotation behavior. Document any browser-specific quirks. _(Requires user manual testing.)_
 
 ---
 
@@ -176,6 +176,7 @@ Task: "T010 — Implement computeScrollRotationDelta() in src/components/map-3d.
 ### Parallel Strategy
 
 With two developers:
+
 1. Both start immediately:
    - Developer A: Phase 1 (Setup) → Phase 3 (US1 — 2D Zoom)
    - Developer B: Phase 4 (US2 — 3D Rotation) — no dependency on Phase 1
