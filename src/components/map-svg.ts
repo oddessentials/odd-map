@@ -19,8 +19,54 @@ import { clampBounds } from '../lib/bounds-clamping.js';
 // Map constants
 const MAP_WIDTH = 960;
 const MAP_HEIGHT = 600;
-const DEFAULT_VIEWBOX = `0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`;
 const REGION_PADDING = 30; // Padding around region bounds for comfortable viewing
+
+// Scroll-wheel zoom constants
+const ZOOM_IN_FACTOR = 0.9;
+const ZOOM_OUT_FACTOR = 1.1;
+const MIN_VIEWBOX_WIDTH = 60; // Maximum zoom (~16x)
+const MAX_VIEWBOX_WIDTH = MAP_WIDTH; // Minimum zoom (full view)
+
+/** ViewBox dimensions for zoom calculations */
+export interface ViewBoxRect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/**
+ * Compute a new viewBox after a scroll-wheel zoom step.
+ * Pure function — no DOM dependencies, exported for testability.
+ *
+ * The zoom is centered on the cursor position in SVG coordinate space:
+ * the point under the cursor remains fixed while the rest of the map scales.
+ */
+export function computeZoomedViewBox(
+  current: ViewBoxRect,
+  cursorSVG: { x: number; y: number },
+  zoomIn: boolean,
+): ViewBoxRect {
+  const factor = zoomIn ? ZOOM_IN_FACTOR : ZOOM_OUT_FACTOR;
+
+  let newW = current.w * factor;
+  let newH = current.h * factor;
+
+  // Clamp width to [MIN_VIEWBOX_WIDTH, MAX_VIEWBOX_WIDTH]
+  if (newW < MIN_VIEWBOX_WIDTH) {
+    newW = MIN_VIEWBOX_WIDTH;
+    newH = MIN_VIEWBOX_WIDTH * (MAP_HEIGHT / MAP_WIDTH);
+  } else if (newW > MAX_VIEWBOX_WIDTH) {
+    newW = MAX_VIEWBOX_WIDTH;
+    newH = MAP_HEIGHT;
+  }
+
+  // Keep cursor point stationary: adjust origin so cursorSVG maps to the same screen position
+  const newX = cursorSVG.x - (cursorSVG.x - current.x) * (newW / current.w);
+  const newY = cursorSVG.y - (cursorSVG.y - current.y) * (newH / current.h);
+
+  return { x: newX, y: newY, w: newW, h: newH };
+}
 
 // Export getMarkerPosition for use by other components
 export { getMarkerPosition, initProjection } from '../lib/projection.js';
@@ -32,6 +78,11 @@ export class MapSvg {
   private selectedRegion: string | null = null;
   private selectedOffice: OfficeWithRegion | null = null;
   private regionBounds: Map<string, ViewBox> = new Map();
+
+  // Scroll-wheel zoom state
+  private currentViewBox = { x: 0, y: 0, w: MAP_WIDTH, h: MAP_HEIGHT };
+  private viewBoxAnimationId: number | null = null;
+  private boundHandleWheel: ((e: WheelEvent) => void) | null = null;
 
   // Race condition fix: track marker initialization state
   private markersReady: boolean = false;
@@ -104,6 +155,24 @@ export class MapSvg {
 
     this.setupEventListeners();
     this.addMarkers();
+
+    // Register scroll-wheel zoom handler
+    this.boundHandleWheel = (e: WheelEvent) => this.handleWheel(e);
+    this.container.addEventListener('wheel', this.boundHandleWheel, { passive: false });
+  }
+
+  /**
+   * Clean up event listeners and animation state.
+   */
+  dispose(): void {
+    if (this.viewBoxAnimationId !== null) {
+      cancelAnimationFrame(this.viewBoxAnimationId);
+      this.viewBoxAnimationId = null;
+    }
+    if (this.boundHandleWheel) {
+      this.container.removeEventListener('wheel', this.boundHandleWheel);
+      this.boundHandleWheel = null;
+    }
   }
 
   /**
@@ -326,7 +395,7 @@ export class MapSvg {
     this.selectedOffice = null;
     this.pendingRegionSelection = null;
 
-    // Reset viewBox
+    // Reset viewBox (animateViewBox will update currentViewBox via animation)
     this.animateViewBox(0, 0, MAP_WIDTH, MAP_HEIGHT);
 
     // Show all markers (visible at all zoom levels)
@@ -338,13 +407,55 @@ export class MapSvg {
     this.options.onReset();
   }
 
+  /**
+   * Handle mouse wheel events for scroll-zoom.
+   * Zooms in/out centered on cursor position, suppresses page scroll.
+   */
+  private handleWheel(event: WheelEvent): void {
+    event.preventDefault();
+
+    const svg = this.svgElement;
+    if (!svg) return;
+
+    // Normalize deltaY to direction only (+1 or -1)
+    const direction = Math.sign(event.deltaY);
+    if (direction === 0) return;
+
+    const zoomIn = direction < 0; // scroll-up = negative deltaY = zoom in
+
+    // Convert screen cursor position to SVG coordinate space
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return;
+    const point = svg.createSVGPoint();
+    point.x = event.clientX;
+    point.y = event.clientY;
+    const cursorSVG = point.matrixTransform(ctm.inverse());
+
+    // Compute new viewBox
+    const newViewBox = computeZoomedViewBox(this.currentViewBox, cursorSVG, zoomIn);
+
+    // Cancel any in-progress click-based zoom animation
+    if (this.viewBoxAnimationId !== null) {
+      cancelAnimationFrame(this.viewBoxAnimationId);
+      this.viewBoxAnimationId = null;
+    }
+
+    // Apply immediately (no animation per tick — responsive to each scroll event)
+    this.currentViewBox = newViewBox;
+    svg.setAttribute('viewBox', `${newViewBox.x} ${newViewBox.y} ${newViewBox.w} ${newViewBox.h}`);
+  }
+
   private animateViewBox(x: number, y: number, width: number, height: number): void {
     const svg = this.svgElement;
     if (!svg) return;
 
-    // Parse current viewBox
-    const currentAttr = svg.getAttribute('viewBox') || DEFAULT_VIEWBOX;
-    const current = currentAttr.split(' ').map(Number);
+    // Cancel any in-progress animation
+    if (this.viewBoxAnimationId !== null) {
+      cancelAnimationFrame(this.viewBoxAnimationId);
+      this.viewBoxAnimationId = null;
+    }
+
+    const current = [this.currentViewBox.x, this.currentViewBox.y, this.currentViewBox.w, this.currentViewBox.h];
     const target = [x, y, width, height];
 
     const duration = 500;
@@ -360,12 +471,17 @@ export class MapSvg {
       const interpolated = current.map((c, i) => c + (target[i] - c) * eased);
       svg.setAttribute('viewBox', interpolated.join(' '));
 
+      // Keep currentViewBox in sync
+      this.currentViewBox = { x: interpolated[0], y: interpolated[1], w: interpolated[2], h: interpolated[3] };
+
       if (progress < 1) {
-        requestAnimationFrame(animate);
+        this.viewBoxAnimationId = requestAnimationFrame(animate);
+      } else {
+        this.viewBoxAnimationId = null;
       }
     };
 
-    requestAnimationFrame(animate);
+    this.viewBoxAnimationId = requestAnimationFrame(animate);
   }
 
   /**

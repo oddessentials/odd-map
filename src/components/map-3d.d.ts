@@ -42,4 +42,13 @@ export declare class Map3D {
   getAutoRotate(): boolean;
 }
 
+/**
+ * Compute the globe rotation delta for a scroll-wheel event.
+ * Scroll-up (negative deltaY) → positive rotation (left).
+ * Scroll-down (positive deltaY) → negative rotation (right).
+ * @param deltaY - WheelEvent.deltaY value
+ * @returns Rotation delta in radians
+ */
+export declare function computeScrollRotationDelta(deltaY: number): number;
+
 export declare function hasWebGL(): boolean;
