@@ -3,7 +3,7 @@
 **Feature Branch**: `012-interactive-map-providers`
 **Created**: 2026-02-07
 **Status**: Draft
-**Input**: User description: "Very carefully explore how we might be able to use the following libraries to further enhance our product. MapLibre and OpenStreetMap. peaceandquiet.com does an impressive job utilizing these libraries. We also have a key to Apple Maps Web for our demo which might provide users with a premium experience alongside our current Google Maps solution."
+**Input**: User description: "Very carefully explore how we might be able to use the following libraries to further enhance our product. MapLibre and OpenStreetMap. Other MapLibre consumers do an impressive job utilizing these libraries. We also have a key to Apple Maps Web for our demo which might provide users with a premium experience alongside our current Google Maps solution."
 
 ## Background & Motivation
 
