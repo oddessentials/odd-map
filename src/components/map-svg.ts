@@ -191,7 +191,8 @@ export class MapSvg {
 
         markerGroup.style.pointerEvents = 'auto';
 
-        marker.addEventListener('click', (e: Event) => {
+        // Single click handler on the group (covers both marker path and hit area)
+        markerGroup.addEventListener('click', (e: Event) => {
           e.stopPropagation();
           this.selectOffice(office);
           this.options.onOfficeClick(office);
@@ -212,12 +213,7 @@ export class MapSvg {
         hitArea.setAttribute('r', '12');
         hitArea.setAttribute('fill', 'transparent');
         hitArea.setAttribute('stroke', 'none');
-        hitArea.setAttribute('pointer-events', 'all');
-        hitArea.addEventListener('click', (e: Event) => {
-          e.stopPropagation();
-          this.selectOffice(office);
-          this.options.onOfficeClick(office);
-        });
+        hitArea.setAttribute('aria-hidden', 'true');
 
         markerGroup.appendChild(hitArea);
         markerGroup.appendChild(marker);

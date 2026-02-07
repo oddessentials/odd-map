@@ -762,6 +762,10 @@ body {
     overflow-y: visible;
   }
 
+  .logo-tagline {
+    display: none;
+  }
+
   /* Region list as compact chip/pill navigation */
   .sidebar-left .region-nav-title {
     display: none;
