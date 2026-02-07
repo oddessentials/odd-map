@@ -84,6 +84,8 @@ export function computeDragPannedViewBox(
   screenDelta: { dx: number; dy: number },
   containerSize: { width: number; height: number }
 ): ViewBoxRect {
+  if (containerSize.width <= 0 || containerSize.height <= 0) return { ...startViewBox };
+
   // Convert screen delta to SVG delta
   const svgDeltaX = screenDelta.dx * (startViewBox.w / containerSize.width);
   const svgDeltaY = screenDelta.dy * (startViewBox.h / containerSize.height);
@@ -215,7 +217,7 @@ export class MapSvg {
     };
 
     this.container.addEventListener('pointerdown', this.boundPointerDown);
-    this.container.addEventListener('pointermove', this.boundPointerMove, { passive: false });
+    this.container.addEventListener('pointermove', this.boundPointerMove);
     this.container.addEventListener('pointerup', this.boundPointerUp);
     this.container.addEventListener('pointercancel', this.boundPointerUp);
     this.container.addEventListener('click', this.boundClickCapture, { capture: true });
@@ -538,8 +540,8 @@ export class MapSvg {
   }
 
   private handlePointerMove(event: PointerEvent): void {
-    if (!event.isPrimary || this.dragStartScreenPos === null) return;
-    if (!this.dragStartViewBox) return;
+    if (event.pointerId !== this.activePointerId) return;
+    if (!this.dragStartScreenPos || !this.dragStartViewBox) return;
 
     const deltaX = event.clientX - this.dragStartScreenPos.x;
     const deltaY = event.clientY - this.dragStartScreenPos.y;
@@ -573,7 +575,7 @@ export class MapSvg {
   }
 
   private handlePointerUp(event: PointerEvent): void {
-    if (!event.isPrimary) return;
+    if (event.pointerId !== this.activePointerId) return;
 
     if (this.isDragging) {
       this.wasDragging = true;

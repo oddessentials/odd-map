@@ -160,18 +160,20 @@ describe('computeDragPannedViewBox', () => {
   // Reversibility
   // ────────────────────────────────────────────────
 
-  it('reversibility: dragging left then right same amount returns to start', () => {
+  it('reversibility: opposite deltas from same start produce symmetric shifts', () => {
     const zoomed: ViewBoxRect = { x: 200, y: 125, w: 480, h: 300 };
-    const left = computeDragPannedViewBox(zoomed, { dx: -80, dy: 0 }, CONTAINER);
-    // Dragging back is equivalent to computing from original start with dx=0
-    const back = computeDragPannedViewBox(zoomed, { dx: 0, dy: 0 }, CONTAINER);
-    expect(back.x).toBe(zoomed.x);
-    expect(back.y).toBe(zoomed.y);
-
-    // Also verify: the shift from one direction is exactly reversed
-    const shiftRight = left.x - zoomed.x;
+    const leftResult = computeDragPannedViewBox(zoomed, { dx: -80, dy: 0 }, CONTAINER);
     const rightResult = computeDragPannedViewBox(zoomed, { dx: 80, dy: 0 }, CONTAINER);
+    const shiftRight = leftResult.x - zoomed.x;
     const shiftLeft = rightResult.x - zoomed.x;
     expect(shiftRight + shiftLeft).toBeCloseTo(0, 10);
+  });
+
+  it('reversibility: panning from intermediate state with opposite delta returns to start', () => {
+    const zoomed: ViewBoxRect = { x: 200, y: 125, w: 480, h: 300 };
+    const panned = computeDragPannedViewBox(zoomed, { dx: -80, dy: -60 }, CONTAINER);
+    const back = computeDragPannedViewBox(panned, { dx: 80, dy: 60 }, CONTAINER);
+    expect(back.x).toBeCloseTo(zoomed.x, 10);
+    expect(back.y).toBeCloseTo(zoomed.y, 10);
   });
 });

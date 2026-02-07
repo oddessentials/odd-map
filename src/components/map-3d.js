@@ -563,7 +563,7 @@ export class Map3D {
     this._boundPointerUp = (e) => this.handlePointerUp(e);
 
     this.container.addEventListener('pointerdown', this._boundPointerDown);
-    this.container.addEventListener('pointermove', this._boundPointerMove, { passive: false });
+    this.container.addEventListener('pointermove', this._boundPointerMove);
     this.container.addEventListener('pointerup', this._boundPointerUp);
     this.container.addEventListener('pointercancel', this._boundPointerUp);
   }
