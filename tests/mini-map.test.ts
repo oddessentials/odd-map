@@ -211,6 +211,7 @@ describe('MiniMap', () => {
 
     expect(container.querySelector('.mini-map-fallback')).toBeTruthy();
     expect(errorSpy).toHaveBeenCalled();
+    expect(failingProvider.dispose).toHaveBeenCalled();
 
     miniMap.dispose();
   });

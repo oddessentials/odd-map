@@ -108,6 +108,8 @@ export class MiniMap {
       this.setupContextLostHandler();
     } catch (err) {
       console.error('[mini-map] Failed to initialize map provider:', err);
+      this.provider?.dispose();
+      this.provider = null;
       this.showFallback();
     } finally {
       this.initializing = false;

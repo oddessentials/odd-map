@@ -18,9 +18,13 @@ import type {
 // Pinned Apple MapKit JS CDN URL (exact version per Constitution Principle VI)
 const MAPKIT_CDN_URL = 'https://cdn.apple-mapkit.com/mk/5.78.1/mapkit.core.js';
 
+// Cached in-flight promise to prevent duplicate script injection on concurrent calls
+let mapkitLoadPromise: Promise<void> | null = null;
+
 /**
  * Load Apple MapKit JS from CDN via script injection.
  * Returns a promise that resolves when the library is ready.
+ * Concurrent calls share the same in-flight promise.
  */
 function loadMapKitJS(): Promise<void> {
   // Already loaded
@@ -28,14 +32,21 @@ function loadMapKitJS(): Promise<void> {
     return Promise.resolve();
   }
 
-  return new Promise((resolve, reject) => {
+  // Return existing in-flight promise if already loading
+  if (mapkitLoadPromise) return mapkitLoadPromise;
+
+  mapkitLoadPromise = new Promise((resolve, reject) => {
     const script = document.createElement('script');
     script.src = MAPKIT_CDN_URL;
     script.crossOrigin = 'anonymous';
     script.onload = () => resolve();
-    script.onerror = () => reject(new Error('Failed to load Apple MapKit JS from CDN'));
+    script.onerror = () => {
+      mapkitLoadPromise = null; // allow retry on failure
+      reject(new Error('Failed to load Apple MapKit JS from CDN'));
+    };
     document.head.appendChild(script);
   });
+  return mapkitLoadPromise;
 }
 
 /**

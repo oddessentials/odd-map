@@ -20,6 +20,7 @@ export class DetailsPanel {
     this.currentOffice = null;
     this.currentRegion = null;
     this.miniMap = null;
+    this.miniMapContainer = null;
 
     this.init();
   }
@@ -66,6 +67,7 @@ export class DetailsPanel {
     if (this.miniMap) {
       this.miniMap.dispose();
       this.miniMap = null;
+      this.miniMapContainer = null;
     }
 
     this.currentRegion = region;
@@ -143,12 +145,6 @@ export class DetailsPanel {
   }
 
   showOffice(office, region) {
-    // Dispose existing mini-map before replacing panel content
-    if (this.miniMap) {
-      this.miniMap.dispose();
-      this.miniMap = null;
-    }
-
     this.currentOffice = office;
     this.currentRegion = region;
     this.closeBtn.classList.remove('panel-close--hidden');
@@ -237,19 +233,23 @@ export class DetailsPanel {
     this.bodyEl.innerHTML = html;
     this.container.classList.add('open');
 
-    // Append mini-map container AFTER innerHTML to avoid destroying
-    // a live MiniMap's DOM when showOffice() is called rapidly.
+    // Re-append persistent mini-map container AFTER innerHTML (which destroys prior DOM).
+    // MiniMap is created once and reused — subsequent calls trigger fly-to animation.
     if (office.coordinates?.lat && office.coordinates?.lon) {
-      const miniMapContainer = document.createElement('div');
-      miniMapContainer.className = 'mini-map-container';
-      miniMapContainer.id = 'details-mini-map';
-      this.bodyEl.querySelector('.office-details')?.appendChild(miniMapContainer);
+      if (!this.miniMapContainer) {
+        this.miniMapContainer = document.createElement('div');
+        this.miniMapContainer.className = 'mini-map-container';
+        this.miniMapContainer.id = 'details-mini-map';
+      }
+      this.bodyEl.querySelector('.office-details')?.appendChild(this.miniMapContainer);
 
       const brandColor =
         getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() ||
         '#00396c';
 
-      this.miniMap = new MiniMap(miniMapContainer);
+      if (!this.miniMap) {
+        this.miniMap = new MiniMap(this.miniMapContainer);
+      }
       this.miniMap.show(office, brandColor);
     }
   }
@@ -259,6 +259,7 @@ export class DetailsPanel {
     if (this.miniMap) {
       this.miniMap.dispose();
       this.miniMap = null;
+      this.miniMapContainer = null;
     }
 
     if (!message) {

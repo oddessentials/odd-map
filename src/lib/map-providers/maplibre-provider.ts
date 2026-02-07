@@ -33,6 +33,12 @@ export class MapLibreProvider implements TileMapProvider {
   private markerClickHandler: ((officeCode: string) => void) | null = null;
   private markersSourceId = 'office-markers';
   private markersLoaded = false;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private markerEventHandlers: Array<{
+    event: string;
+    layer: string;
+    handler: (...args: any[]) => void;
+  }> = [];
 
   constructor(customStyleUrl?: string) {
     this.customStyleUrl = customStyleUrl;
@@ -152,9 +158,20 @@ export class MapLibreProvider implements TileMapProvider {
     this.map?.resize();
   }
 
+  private removeMarkerEventHandlers(): void {
+    if (!this.map) return;
+    for (const { event, layer, handler } of this.markerEventHandlers) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      this.map.off(event as any, layer, handler as any);
+    }
+    this.markerEventHandlers = [];
+  }
+
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
+
+    this.removeMarkerEventHandlers();
 
     if (this.marker) {
       this.marker.remove();
@@ -247,17 +264,34 @@ export class MapLibreProvider implements TileMapProvider {
       },
     });
 
+    // Remove previous event handlers before adding new ones
+    this.removeMarkerEventHandlers();
+
     // Wire click handler for unclustered markers
-    this.map.on('click', 'unclustered-point', (e) => {
+    const onUnclusteredClick = (
+      e: import('maplibre-gl').MapMouseEvent & {
+        features?: import('maplibre-gl').MapGeoJSONFeature[];
+      }
+    ) => {
       const feature = e.features?.[0];
       const officeCode = feature?.properties?.officeCode;
       if (typeof officeCode === 'string' && this.markerClickHandler) {
         this.markerClickHandler(officeCode);
       }
+    };
+    this.map.on('click', 'unclustered-point', onUnclusteredClick);
+    this.markerEventHandlers.push({
+      event: 'click',
+      layer: 'unclustered-point',
+      handler: onUnclusteredClick,
     });
 
     // Click on clusters to zoom in
-    this.map.on('click', 'clusters', async (e) => {
+    const onClusterClick = async (
+      e: import('maplibre-gl').MapMouseEvent & {
+        features?: import('maplibre-gl').MapGeoJSONFeature[];
+      }
+    ) => {
       const feature = e.features?.[0];
       if (!feature || !this.map) return;
       const source = this.map.getSource(this.markersSourceId);
@@ -273,21 +307,33 @@ export class MapLibreProvider implements TileMapProvider {
           // Cluster expansion zoom not available
         }
       }
-    });
+    };
+    this.map.on('click', 'clusters', onClusterClick);
+    this.markerEventHandlers.push({ event: 'click', layer: 'clusters', handler: onClusterClick });
 
     // Change cursor on hover over clickable markers
-    this.map.on('mouseenter', 'unclustered-point', () => {
+    const onUnclusteredEnter = () => {
       if (this.map) this.map.getCanvas().style.cursor = 'pointer';
-    });
-    this.map.on('mouseleave', 'unclustered-point', () => {
+    };
+    const onUnclusteredLeave = () => {
       if (this.map) this.map.getCanvas().style.cursor = '';
-    });
-    this.map.on('mouseenter', 'clusters', () => {
+    };
+    const onClusterEnter = () => {
       if (this.map) this.map.getCanvas().style.cursor = 'pointer';
-    });
-    this.map.on('mouseleave', 'clusters', () => {
+    };
+    const onClusterLeave = () => {
       if (this.map) this.map.getCanvas().style.cursor = '';
-    });
+    };
+    this.map.on('mouseenter', 'unclustered-point', onUnclusteredEnter);
+    this.map.on('mouseleave', 'unclustered-point', onUnclusteredLeave);
+    this.map.on('mouseenter', 'clusters', onClusterEnter);
+    this.map.on('mouseleave', 'clusters', onClusterLeave);
+    this.markerEventHandlers.push(
+      { event: 'mouseenter', layer: 'unclustered-point', handler: onUnclusteredEnter },
+      { event: 'mouseleave', layer: 'unclustered-point', handler: onUnclusteredLeave },
+      { event: 'mouseenter', layer: 'clusters', handler: onClusterEnter },
+      { event: 'mouseleave', layer: 'clusters', handler: onClusterLeave }
+    );
 
     this.markersLoaded = true;
   }
