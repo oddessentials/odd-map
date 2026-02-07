@@ -1,120 +1,152 @@
 # odd-map
 
 [![CI](https://github.com/oddessentials/odd-map/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/oddessentials/odd-map/actions/workflows/ci.yml)
-[![Demo](https://img.shields.io/badge/demo-live-brightgreen)](https://oddessentials.github.io/odd-map/)
+[![Tests](https://img.shields.io/badge/tests-456_passing-brightgreen)](https://github.com/oddessentials/odd-map/actions)
+[![Demo](https://img.shields.io/badge/demo-live-blue)](https://oddessentials.github.io/odd-map/)
 
-A white-label interactive office locator with three rendering modes (2D SVG, 3D Globe, Tile Map), region-based navigation, and multi-client configuration. Fully static — no backend required.
+A white-label, mobile-friendly interactive office locator with three rendering modes, region-based navigation, and multi-client theming. Fully static — no backend required.
 
-**[View Live Demo](https://oddessentials.github.io/odd-map/)** (default client) | **[View with USG config](https://oddessentials.github.io/odd-map/?client=usg)**
+**[View Live Demo](https://oddessentials.github.io/odd-map/)** · Works on desktop & mobile
 
-> Switch clients via the `?client=` query parameter:
->
-> - `https://oddessentials.github.io/odd-map/` — default (Odd Essentials)
-> - `https://oddessentials.github.io/odd-map/?client=usg` — USG Insurance Services
-> - `https://oddessentials.github.io/odd-map/?client=oddessentials` — Odd Essentials (explicit)
+---
 
 ## Features
 
-- **Three Map Modes**: 2D SVG map, 3D Three.js globe, and interactive tile map (MapLibre GL / Apple MapKit)
-- **Region-Based Navigation**: Click regions to zoom in, click offices for details with mini-map
-- **White-Label Support**: Multi-client configuration with per-client theming, branding, and data
-- **Responsive Design**: Desktop sidebar layout with mobile bottom-sheet panel
-- **Accessibility**: Keyboard navigation, ARIA labels, focus management, 2D SVG fallback
-- **Zero Backend**: Fully static site deployable to any CDN or GitHub Pages
+- **Three Map Modes** — 2D SVG with pan/zoom, 3D Three.js globe with rotation, and interactive tile map (MapLibre GL / Apple MapKit)
+- **Region-Based Navigation** — Click regions to zoom in, select offices for full details with inline mini-map
+- **White-Label Multi-Client** — Per-client branding, theme colors, office data, and map provider config via JSON
+- **Mobile-First Touch** — Pinch-to-zoom, swipe-to-dismiss bottom sheet, 44px touch targets, safe area insets for notched devices
+- **Accessible** — Keyboard navigation, ARIA labels, focus management, reduced-motion support
+- **Zero Backend** — Fully static build deployable to any CDN, S3 bucket, or GitHub Pages
 
 ## Quick Start
 
 ```bash
 npm install
-npm run dev        # Start dev server → http://localhost:3000
-npm test           # Run tests in watch mode
+npm run dev          # Start dev server at http://localhost:3000
+npm test             # Run tests in watch mode
 ```
+
+## Switching Clients
+
+The active client is controlled by the `?client=` URL query parameter. Each client gets its own branding, theme, and office data.
+
+```
+https://your-domain.com/                         # default client
+https://your-domain.com/?client=oddessentials    # explicit client
+```
+
+To add a new client, create two JSON files in `config/` and register the client ID in the appropriate `clients.*.json` registry. See [Multi-Client Configuration](#multi-client-configuration) for details.
 
 ## Commands
 
-| Command             | Description                               |
-| ------------------- | ----------------------------------------- |
-| `npm run dev`       | Start Vite dev server                     |
-| `npm run build`     | Build production bundle                   |
-| `npm run verify`    | Full CI check (lint, format, types, test) |
-| `npm test`          | Run tests in watch mode (Vitest)          |
-| `npm run test:ci`   | Verify all clients + run tests once       |
-| `npm run typecheck` | TypeScript type checking                  |
-| `npm run lint`      | ESLint check                              |
-| `npm run format`    | Prettier format                           |
+| Command             | Description                                                         |
+| ------------------- | ------------------------------------------------------------------- |
+| `npm run dev`       | Start Vite dev server                                               |
+| `npm run build`     | Production build to `dist/`                                         |
+| `npm run verify`    | Full CI check — lint, format, typecheck, client verification, tests |
+| `npm test`          | Run 456 tests in watch mode (Vitest)                                |
+| `npm run test:ci`   | Verify all clients + run tests once                                 |
+| `npm run typecheck` | TypeScript type checking                                            |
+| `npm run lint`      | ESLint check                                                        |
+| `npm run format`    | Prettier format                                                     |
 
 ## Project Structure
 
 ```
 odd-map/
-├── config/               # Client configurations (JSON)
-│   ├── clients.prod.json       # Production client registry
-│   ├── clients.demo.json       # Demo (GitHub Pages) registry
-│   ├── {client}-client.json    # Client branding/theme
-│   └── {client}-map-config.json# Client office data + coordinates
-├── scripts/              # Build & data pipeline scripts
-│   ├── scrape_locations.py     # Scrape office data from website
-│   ├── geocode_locations.py    # Geocode addresses to coordinates
-│   ├── generate_data_artifact.py # Generate config from scraped data
-│   └── verify-*.ts             # Verification scripts
+├── config/                   # Client configuration files
+│   ├── clients.prod.json           # Production client registry
+│   ├── clients.demo.json           # Demo (GitHub Pages) registry
+│   ├── {client}-client.json        # Branding: name, logo, theme colors
+│   └── {client}-map-config.json    # Data: offices, regions, coordinates
+├── scripts/                  # Build, data pipeline & verification
+│   ├── scrape_locations.py         # Scrape office data from website
+│   ├── geocode_locations.py        # Geocode addresses to lat/lon
+│   ├── generate_data_artifact.py   # Generate config from scraped data
+│   ├── verify-all-clients.ts       # Validate all client configs
+│   ├── verify-map-integrity.ts     # SVG map + data integrity checks
+│   └── ...                         # Additional tooling scripts
 ├── src/
-│   ├── app.ts                  # Application entry point
-│   ├── components/             # UI components (TS + JS)
-│   │   ├── map-svg.ts          # 2D SVG map with pan/zoom
-│   │   ├── map-3d.js           # 3D Three.js globe
-│   │   ├── tile-map.ts         # Tile map (MapLibre/Apple)
-│   │   ├── mini-map.ts         # Inline mini-map for details
-│   │   ├── details-panel.js    # Office details sidebar/sheet
-│   │   └── ...
-│   ├── lib/                    # Shared utilities
-│   │   ├── client-config.ts    # Client config loading + validation
-│   │   ├── map-providers/      # Tile map provider abstraction
-│   │   └── ...
-│   ├── styles/                 # CSS (tokens, base, app)
-│   ├── types/                  # TypeScript type definitions
-│   └── index.html              # HTML entry point
-├── tests/                # Vitest unit tests (433+ tests)
-└── docs/                 # GitHub Pages deployment (auto-generated)
+│   ├── app.ts                      # Application entry point
+│   ├── components/                 # UI components
+│   │   ├── map-svg.ts              # 2D SVG map (pan, zoom, pinch)
+│   │   ├── map-3d.js               # 3D Three.js globe
+│   │   ├── tile-map.ts             # Tile map (MapLibre / Apple MapKit)
+│   │   ├── mini-map.ts             # Inline mini-map in detail views
+│   │   ├── details-panel.js        # Office details sidebar / bottom sheet
+│   │   └── ...                     # Modal, region list, overlays
+│   ├── lib/                        # Shared utilities & config loading
+│   │   ├── client-config.ts        # Client config loader + Zod validation
+│   │   ├── map-providers/          # Tile map provider abstraction layer
+│   │   └── ...                     # Projection, theming, escape, state
+│   ├── styles/                     # CSS (design tokens, base, app)
+│   ├── types/                      # TypeScript type definitions
+│   └── index.html                  # HTML entry point
+├── tests/                    # 456 Vitest unit tests across 31 suites
+└── docs/                     # GitHub Pages deployment (auto-generated)
 ```
 
 ## Multi-Client Configuration
 
-Each client has two config files in `config/`:
+Each client requires two JSON files in `config/`:
 
-- **`{client}-client.json`** — Branding: name, logo, theme colors
-- **`{client}-map-config.json`** — Data: offices, regions, coordinates, map provider settings
+| File                       | Purpose                                                     |
+| -------------------------- | ----------------------------------------------------------- |
+| `{client}-client.json`     | Branding — name, logo URL, theme colors, tagline            |
+| `{client}-map-config.json` | Data — offices, regions, coordinates, map provider settings |
 
-The client is selected at runtime via the `?client=` URL parameter. The client registry (`clients.*.json`) defines which clients are available per environment.
+Clients are registered in `clients.*.json` (one per environment). The active client is resolved at runtime from the `?client=` URL parameter, falling back to the registry's `defaultClient`.
+
+**To add a new client:**
+
+1. Create `config/yourclient-client.json` with branding and theme
+2. Create `config/yourclient-map-config.json` with office/region data
+3. Add `"yourclient"` to the `clients` array in the appropriate `clients.*.json`
+4. Run `npm run verify` to validate
 
 ## Data Pipeline (Python)
 
-The Python scripts in `scripts/` scrape, geocode, and package office location data into client config files. This pipeline was originally built for [USG Insurance Services](https://www.usgins.com/locations) and can be adapted for other clients.
+The Python scripts in `scripts/` automate scraping, geocoding, and packaging office location data into client config files. This pipeline was built for [USG Insurance Services](https://www.usgins.com/locations) as a reference implementation and can be adapted for any client with a public locations page.
 
 ```bash
 # Full pipeline: scrape → geocode → generate config
 npm run data
 
 # Individual steps
-npm run scrape      # Scrape office data from usgins.com
-npm run geocode     # Geocode addresses to lat/lon coordinates
-npm run build:data  # Generate config JSON from scraped data
+npm run scrape       # Scrape office data from usgins.com
+npm run geocode      # Geocode addresses to lat/lon coordinates
+npm run build:data   # Generate config JSON from scraped data
 ```
 
-> **Example**: See the USG config in action at [oddessentials.github.io/odd-map/?client=usg](https://oddessentials.github.io/odd-map/?client=usg)
+> See the USG-generated config in action: [oddessentials.github.io/odd-map/?client=usg](https://oddessentials.github.io/odd-map/?client=usg)
 
-**Requirements**: Python 3.8+ with dependencies in `scripts/requirements.txt`
+**Requirements:** Python 3.8+ with dependencies from `scripts/requirements.txt`
+
+## Tech Stack
+
+| Layer        | Technology                                      |
+| ------------ | ----------------------------------------------- |
+| Language     | TypeScript 5.7 (ES2022), JavaScript (3D module) |
+| Bundler      | Vite 7.3.1                                      |
+| Testing      | Vitest 4.0.17, jsdom                            |
+| 3D Rendering | Three.js 0.182                                  |
+| Tile Maps    | MapLibre GL JS, Apple MapKit JS                 |
+| Validation   | Zod 4.3                                         |
+| CI/CD        | GitHub Actions, Husky, lint-staged, commitlint  |
+| Linting      | ESLint 9, Prettier 3.8                          |
 
 ## Requirements
 
 - **Node.js 22+** — Dev server, build, tests
-- **Python 3.8+** — Data pipeline only (not needed for development)
+- **Python 3.8+** — Data pipeline only (optional, not needed for development)
 
 ## Deployment
 
-The demo site auto-deploys to GitHub Pages on every push to `main`. The CI workflow builds with the demo client registry and commits the output to the `docs/` directory.
+The demo site auto-deploys to GitHub Pages on every push to `main`. The CI workflow builds with the demo client registry and outputs to `docs/`.
 
-For production deployments, run `npm run build` and serve the `dist/` directory from any static host.
+For production, run `npm run build` and serve `dist/` from any static host.
 
 ## Licence
 
-This project is licensed under the ISC License — see [LICENCE.md](./LICENCE.md) for details.
+ISC License — see [LICENCE.md](./LICENCE.md) for details.
