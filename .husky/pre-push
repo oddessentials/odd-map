@@ -1,4 +1,40 @@
 #!/usr/bin/env sh
-# Pre-push: Full verification before pushing to remote
-# This is the "Victory Gate" per repo-standards
+# Pre-push: CI-equivalent quality gate
+# Mirrors .github/workflows/ci.yml and azure-pipelines.yml exactly.
+# Blocks push if any check would fail CI.
+
+set -e
+
+echo ""
+echo "═══════════════════════════════════════════════════════════"
+echo "  pre-push │ CI-equivalent verification"
+echo "═══════════════════════════════════════════════════════════"
+echo ""
+
+# ── 1. CRLF Detection (mirrors ci.yml + azure-pipelines.yml) ──
+echo "▶ [1/3] CRLF detection..."
+CRLF_FILES=$(git ls-files --eol | grep -E "w/crlf" | grep -E "\.(sh|ts|tsx|js|jsx|mjs|cjs|json|ya?ml)$" || true)
+if [ -n "$CRLF_FILES" ]; then
+  echo "✗ CRLF line endings detected in source files:"
+  echo "$CRLF_FILES"
+  exit 1
+fi
+echo "  ✓ No CRLF issues"
+echo ""
+
+# ── 2. Full verification (typecheck + lint + format + tests) ──
+echo "▶ [2/3] npm run verify..."
 npm run verify
+echo "  ✓ Verification passed"
+echo ""
+
+# ── 3. Build verification ──
+echo "▶ [3/3] npm run build..."
+npm run build
+echo "  ✓ Build succeeded"
+echo ""
+
+echo "═══════════════════════════════════════════════════════════"
+echo "  ✓ All checks passed — push allowed"
+echo "═══════════════════════════════════════════════════════════"
+echo ""

@@ -36,6 +36,26 @@ const GLOBE_RADIUS = 100;
 const GLOBE_SEGMENTS = 64;
 const ATMOSPHERE_SCALE = 1.15;
 
+// Scroll-wheel rotation constant (radians per scroll tick)
+const SCROLL_ROTATION_STEP = 0.05;
+
+/**
+ * Compute the globe rotation delta for a scroll-wheel event.
+ * Pure function — exported for testability.
+ *
+ * Scroll-up (negative deltaY) → positive rotation (globe turns left).
+ * Scroll-down (positive deltaY) → negative rotation (globe turns right).
+ * Uses Math.sign() for direction-only normalization (ignores magnitude).
+ *
+ * @param {number} deltaY - WheelEvent.deltaY value
+ * @returns {number} Rotation delta in radians to add to globeGroup.rotation.y
+ */
+export function computeScrollRotationDelta(deltaY) {
+  const sign = Math.sign(deltaY);
+  if (sign === 0) return 0;
+  return -sign * SCROLL_ROTATION_STEP;
+}
+
 // Backface culling hysteresis thresholds (prevents flickering at visibility boundary)
 // HIDE_THRESHOLD must be > SHOW_THRESHOLD to create hysteresis band
 export const BACKFACE_HIDE_THRESHOLD = 0.25; // Hide marker when dot product exceeds this
@@ -207,6 +227,7 @@ export class Map3D {
     this._boundOnResize = null;
     this._boundOnMouseMove = null;
     this._boundOnClick = null;
+    this._boundOnWheel = null;
 
     // Performance: reusable vectors (object pooling)
     this._tempVectors = {
@@ -498,10 +519,28 @@ export class Map3D {
     this._boundOnMouseMove = (e) => this.onMouseMove(e);
     this._boundOnClick = (e) => this.onClick(e);
     this._boundOnResize = () => this.onResize();
+    this._boundOnWheel = (e) => this.handleWheel(e);
 
     this.container.addEventListener('mousemove', this._boundOnMouseMove);
     this.container.addEventListener('click', this._boundOnClick);
     window.addEventListener('resize', this._boundOnResize);
+    this.container.addEventListener('wheel', this._boundOnWheel, { passive: false });
+  }
+
+  /**
+   * Handle mouse wheel events for scroll-driven globe rotation.
+   * Scroll-up rotates left, scroll-down rotates right.
+   * Suppresses default page scrolling when cursor is over the globe.
+   */
+  handleWheel(event) {
+    event.preventDefault();
+
+    if (!this.globeGroup) return;
+
+    const delta = computeScrollRotationDelta(event.deltaY);
+    if (delta === 0) return;
+
+    this.globeGroup.rotation.y += delta;
   }
 
   /**
@@ -929,6 +968,9 @@ export class Map3D {
       }
       if (this._boundOnClick && this.container) {
         this.container.removeEventListener('click', this._boundOnClick);
+      }
+      if (this._boundOnWheel && this.container) {
+        this.container.removeEventListener('wheel', this._boundOnWheel);
       }
 
       // Dispose tooltip
