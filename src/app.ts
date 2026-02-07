@@ -76,8 +76,8 @@ class App {
   private spinBtn: HTMLElement | null;
 
   constructor() {
-    // Rendering mode: default to 2D for testing
-    this.mapMode = '2d';
+    // Rendering mode: default to Tile
+    this.mapMode = 'tile';
 
     // DOM elements
     this.mapContainer = document.getElementById('map-container');

@@ -245,7 +245,7 @@ export class Map3D {
 
     // Event handler references (for removal in dispose)
     this._boundOnResize = null;
-    this._boundOnMouseMove = null;
+    this._boundOnPointerMove = null;
     this._boundOnClick = null;
     this._boundOnWheel = null;
 
@@ -547,12 +547,12 @@ export class Map3D {
 
   setupEventListeners() {
     // Store bound references for removal in dispose()
-    this._boundOnMouseMove = (e) => this.onMouseMove(e);
+    this._boundOnPointerMove = (e) => this.onPointerMove(e);
     this._boundOnClick = (e) => this.onClick(e);
     this._boundOnResize = () => this.onResize();
     this._boundOnWheel = (e) => this.handleWheel(e);
 
-    this.container.addEventListener('mousemove', this._boundOnMouseMove);
+    this.container.addEventListener('pointermove', this._boundOnPointerMove);
     this.container.addEventListener('click', this._boundOnClick);
     window.addEventListener('resize', this._boundOnResize);
     this.container.addEventListener('wheel', this._boundOnWheel, { passive: false });
@@ -661,7 +661,7 @@ export class Map3D {
     return objects;
   }
 
-  onMouseMove(event) {
+  onPointerMove(event) {
     const rect = this.container.getBoundingClientRect();
     this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
@@ -1078,8 +1078,8 @@ export class Map3D {
       if (this._boundOnResize) {
         window.removeEventListener('resize', this._boundOnResize);
       }
-      if (this._boundOnMouseMove && this.container) {
-        this.container.removeEventListener('mousemove', this._boundOnMouseMove);
+      if (this._boundOnPointerMove && this.container) {
+        this.container.removeEventListener('pointermove', this._boundOnPointerMove);
       }
       if (this._boundOnClick && this.container) {
         this.container.removeEventListener('click', this._boundOnClick);

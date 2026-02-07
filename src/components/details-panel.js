@@ -60,6 +60,88 @@ export class DetailsPanel {
 
     // Hide close button in initial placeholder state (no-op when nothing selected)
     this.closeBtn.classList.add('panel-close--hidden');
+
+    // Setup mobile swipe-to-dismiss gestures
+    this.setupMobileGestures();
+  }
+
+  /**
+   * Swipe-to-dismiss for the mobile bottom sheet.
+   * Uses touch events (not pointer) so it only fires on touch devices
+   * and doesn't interfere with mouse interactions on desktop.
+   */
+  setupMobileGestures() {
+    let startY = 0;
+    let startScrollTop = 0;
+    let currentTranslateY = 0;
+    let tracking = false;
+
+    this.container.addEventListener(
+      'touchstart',
+      (e) => {
+        if (!this.container.classList.contains('open')) return;
+        if (!e.touches.length) return;
+        const touch = e.touches[0];
+        startY = touch.clientY;
+        startScrollTop = this.bodyEl.scrollTop;
+        currentTranslateY = 0;
+        tracking = true;
+      },
+      { passive: true }
+    );
+
+    this.container.addEventListener(
+      'touchmove',
+      (e) => {
+        if (!tracking) return;
+        if (!e.touches.length) return;
+        const touch = e.touches[0];
+        const deltaY = touch.clientY - startY;
+
+        // Only intercept if panel is scrolled to top and swiping down
+        if (startScrollTop <= 1 && deltaY > 0) {
+          e.preventDefault();
+          // Resistance factor for natural feel
+          currentTranslateY = deltaY * 0.6;
+          this.container.style.transform = `translateY(${currentTranslateY}px)`;
+          this.container.style.transition = 'none';
+        }
+      },
+      { passive: false }
+    );
+
+    const onTouchEnd = () => {
+      if (!tracking) return;
+      tracking = false;
+
+      if (currentTranslateY > 80) {
+        // Dismiss: animate down and close
+        this.container.style.transition = 'transform 0.25s ease-out';
+        this.container.style.transform = 'translateY(100%)';
+        this.container.classList.remove('open');
+        this.options.onClose();
+
+        // Reset after transition
+        setTimeout(() => {
+          this.container.style.transition = '';
+          this.container.style.transform = '';
+        }, 250);
+      } else if (currentTranslateY > 0) {
+        // Snap back
+        this.container.style.transition = 'transform 0.2s ease-out';
+        this.container.style.transform = '';
+
+        setTimeout(() => {
+          this.container.style.transition = '';
+        }, 200);
+      }
+
+      currentTranslateY = 0;
+    };
+
+    this.container.addEventListener('touchend', onTouchEnd, { passive: true });
+    // Handle touchcancel (system gesture interruption) — snap back to prevent stuck state
+    this.container.addEventListener('touchcancel', onTouchEnd, { passive: true });
   }
 
   showRegion(region) {

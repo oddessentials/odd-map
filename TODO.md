@@ -1,237 +1,45 @@
-# USG Map - Consolidated TODO
+# odd-map — Backlog
 
-**Last Updated:** 2026-02-05
+**Last reviewed:** 2026-02-07
 
----
-
-## ✅ FIXED - 3D Map Issues (Branch: 001-fix-map-bugs)
-
-### 1. Pins Disappear on 3D → 2D Transition
-
-**Status:** ✅ FIXED (commit c5c2cef)
-
-**Solution:** Added race condition fix with `markersReady` flag and `pendingRegionSelection` queue in `map-svg.ts`. When `selectRegion()` is called before markers exist, the selection is queued and processed after `addMarkers()` completes.
-
-**Files:** `src/components/map-svg.ts`
+Items below are forward-looking enhancements. All blocking and critical work has been completed.
 
 ---
 
-### 2. 3D Map Pin Flickering
+## Production Readiness
 
-**Status:** ✅ FIXED (commit c8daf5e)
+### 1. Client Onboarding Guide
 
-**Solution:** Added hysteresis to backface culling with two thresholds:
+Create a dedicated `docs/CLIENT_ONBOARDING.md` covering the full end-to-end workflow for adding a new client: SVG region prep, config file structure, coordinate capture, theme customisation, verification checklist, and deployment steps. The README covers the basics — this would be the comprehensive reference for implementation teams.
 
-- `BACKFACE_HIDE_THRESHOLD = 0.25` (hide when exceeds)
-- `BACKFACE_SHOW_THRESHOLD = 0.15` (show when drops below)
+**Files:** `docs/CLIENT_ONBOARDING.md` (new)
 
-The 0.10 gap prevents rapid toggling at the visibility boundary.
+### 2. Schema Migration Strategy
 
-**Files:** `src/components/map-3d.js`
+The config loader already validates `schemaVersion` and rejects unsupported versions (`client-config.ts`). Document the formal migration path: version bump process, migration function pattern, backwards-compatibility policy, and rollback procedure. Create `docs/SCHEMA_MIGRATION.md`.
 
----
+**Files:** `docs/SCHEMA_MIGRATION.md` (new)
 
-### 3. 3D Map Pins in Wrong Location (Ocean Instead of USA)
+### 3. Error Monitoring Integration
 
-**Status:** ✅ FIXED (commit 9e1d97e)
+Add structured error tracking hooks for production observability. The app already renders inline error UI for all config failure modes (`app.ts`) — this item is about adding integration points (Sentry, Datadog, or similar) for `initProjection()` failures, config validation errors, and map provider load failures.
 
-**Solution:** Calibrated texture alignment with empirically determined offsets:
-
-- `TEXTURE_LONGITUDE_OFFSET_DEG = 85` (not 180 as initially assumed)
-- `texture.offset.y = 0.15` (vertical alignment)
-
-**Files:** `src/components/map-3d.js`
+**Files:** `src/lib/error-tracking.ts` (new), integration in `src/app.ts`
 
 ---
 
-## 🔴 MUST DO - Before First Production Deploy
+## Quality Assurance
 
-### 4. Integrate Validation into Coordinate Capture Tool ⏱️ 2h
+### 4. E2E Testing
 
-**Why:** Prevents capturing bad coordinates (ocean, wrong region)
+Add Playwright tests covering the critical user paths: page load, region click, office drill-down, map mode switching, and client switching via URL parameter. Current coverage is 456 unit tests across 31 suites — E2E would validate the full integration.
 
-**Steps:**
+**Files:** `e2e/` (new directory), `playwright.config.ts` (new)
 
-1. Import `validateCaptureSession` into `tools/coordinate-capture.html`
-2. Call validation before enabling export button
-3. Display errors/warnings in UI with visual indicators
-4. Block export if errors exist, allow with warnings
+### 5. Formal Accessibility Audit
 
-**Files:** `tools/coordinate-capture.html`, `src/lib/coordinate-validation.ts` ✅
+Run axe-core automated scan and perform manual screen reader testing (NVDA/VoiceOver). The app already has ARIA labels, keyboard navigation, focus management, and `prefers-reduced-motion` support. This audit would identify any remaining WCAG 2.1 AA gaps and document compliance status.
 
----
+### 6. Performance Benchmarking
 
-### 5. Update Coordinate Capture Tool with Backup Integration ⏱️ 1h
-
-**Why:** Prevents config corruption during manual updates
-
-**Steps:**
-
-1. Import `safeWriteConfig` into capture tool
-2. Replace direct JSON write with `safeWriteConfig`
-3. Show backup confirmation in export flow
-4. Add "Restore from Backup" button
-
-**Files:** `tools/coordinate-capture.html`, `scripts/config-backup.ts` ✅
-
----
-
-### 6. Fix SVG Region IDs ⏱️ 30min
-
-**Why:** Blocks all verification, needs to pass before deploy
-
-**Steps:**
-
-1. Run: `npm run add-region-ids:dry-run` (preview)
-2. Review proposed changes
-3. Run: `npm run add-region-ids` (apply)
-4. Verify SVG still renders
-5. Run: `npm run generate:map-hash`
-6. Run: `npm run verify:svg-ids` (should pass)
-
----
-
-### 7. Create Migration/Onboarding Documentation ⏱️ 2h
-
-**Why:** Engineers need to know how to add clients
-
-**Steps:**
-
-1. Create `docs/CLIENT_ONBOARDING.md` with prerequisites, SVG prep, config creation, region ID naming, coordinate capture workflow, verification checklist
-2. Add to README.md
-
----
-
-### 8. Add Error Recovery UI to MapSvg ⏱️ 1.5h
-
-**Why:** White screen on config load failure is bad UX
-
-**Steps:**
-
-1. Add error state to MapSvg component
-2. Render fallback UI on init failure (error message, "Retry" button, "Report Issue" link)
-3. Add manual client switching UI (for multi-tenant apps)
-4. Test with invalid config
-
-**Files:** `src/components/map-svg.ts`
-
----
-
-## 🟡 SHOULD DO - Post-Deploy Hardening
-
-### 9. Runtime Hot Reload for Config Updates ⏱️ 2h
-
-Add file watcher to detect config changes, call `initProjection()` to reload, re-render markers, show toast notification.
-
----
-
-### 10. Document Schema Migration Strategy ⏱️ 1h
-
-Create `docs/SCHEMA_MIGRATION.md` documenting v1 schema, outline migration approach with `configVersion` check, create migration functions.
-
----
-
-### 11. Add Memory Management for Multi-Client ⏱️ 1.5h
-
-Implement LRU cache for `clientStates` Map, add `maxClients` config, add `clearClient(clientId)` API.
-
-**Files:** `src/lib/projection.ts`
-
----
-
-### 12. Integrate Monitoring/Observability ⏱️ 2h
-
-Add error tracking integration points for `getMarkerPosition()` failures, `initProjection()` failures, validation failures. Document Sentry/DataDog integration.
-
----
-
-### 13. Handle 3D Map Lat/Lon Decision ⏱️ 1h
-
-**Recommendation:** Keep lat/lon as reference data. 3D map continues using `office.coordinates`, 2D uses office code lookup. Document decision in `docs/ARCHITECTURE.md`.
-
----
-
-## 🟢 NICE TO HAVE - Polish
-
-### 14. E2E Testing for Coordinate Capture Tool ⏱️ 3h
-
-Set up Playwright, write tests for load tool, click map, enter office code, export config.
-
----
-
-### 15. Accessibility Audit & Fixes ⏱️ 2h
-
-Run axe-core, add screen reader labels, ensure keyboard navigation, add ARIA announcements.
-
----
-
-### 16. Performance Testing ⏱️ 2h
-
-Create perf test with 100+ offices, benchmark `initProjection()` and marker rendering time.
-
----
-
-### 17. Implement White-Labeling ⏱️ 4h
-
-Add pinAsset to config schema, support custom pin SVG/image, add brandColors to config.
-
----
-
-### 18. Create CLI Tool for Common Tasks ⏱️ 3h
-
-Create `scripts/map-cli.ts` with commands: `map new-client`, `map verify`, `map backup`, `map migrate`.
-
----
-
-## ✅ COMPLETED
-
-- **3D Map Bug Fixes (001-fix-map-bugs branch)**:
-  - Race condition fix for 2D/3D view toggle (markersReady + pendingRegionSelection)
-  - Texture alignment calibration (85° longitude, 0.15 latitude offset)
-  - Hysteresis backface culling to prevent flickering (0.15/0.25 thresholds)
-  - HMR support for dev server with proper Three.js resource cleanup
-  - 118 tests passing (added 9 hysteresis tests, updated texture offset tests)
-- Office Modal Component with Google Maps directions
-- Scene Graph Organization (globeGroup, markerGroup, regionOverlayGroup, staticGroup)
-- Performance Optimizations (object pooling, animation guards, throttled updates)
-- Unit Tests (20 projection + 9 view switching tests)
-- TypeScript compilation clean, Vite build successful
-- Phase 1: Integrity Infrastructure
-- Phase 3: UI Integration with Loud Failures
-- Phase 3.5: Production Release Gates
-- Phase 3.6: Multi-Tenant Safety
-- SVG Region ID Generator Tool
-- Config Backup/Restore Utilities
-- Coordinate Validation Logic
-
----
-
-## 📊 Priority Summary
-
-| Priority                 | Items  | Est. Time |
-| ------------------------ | ------ | --------- |
-| ✅ Critical 3D Issues    | #1-3   | DONE      |
-| 🔴 Must Do Pre-Deploy    | #4-8   | 7h        |
-| 🟡 Post-Deploy Hardening | #9-13  | 7.5h      |
-| 🟢 Polish                | #14-18 | 14h       |
-
----
-
-## 🚀 Quick Reference
-
-**Key Files:**
-
-- `src/components/map-3d.js` - 3D globe implementation
-- `src/components/map-svg.ts` - 2D SVG map implementation
-- `src/app.ts` - Application controller, view switching
-- `src/lib/projection.ts` - Coordinate projection system
-
-**Test Commands:**
-
-```bash
-npm run test:ci           # Full verification + tests
-npm run verify:production # SVG IDs + integrity checks
-npm run build             # Production build
-```
-
-**Estimated to Production:** 2-3 sessions (15-20 hours)
+Benchmark with a synthetic large-client config (100+ offices across 10+ regions) to establish baseline metrics for initial load, map mode switching, and region drill-down. Useful for setting SLA targets and identifying bottlenecks before scaling to larger clients.
