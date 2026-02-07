@@ -211,6 +211,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  touch-action: manipulation;
 }
 
 .map-container svg {
@@ -747,19 +748,60 @@ body {
 
 @media (max-width: 768px) {
   .layout {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
   }
 
   .sidebar-left {
-    order: 2;
+    order: 0;
+    flex-shrink: 0;
     border-right: none;
-    border-top: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--color-border);
+    padding: var(--space-2) var(--space-3);
+    overflow-y: visible;
+  }
+
+  .logo-tagline {
+    display: none;
+  }
+
+  /* Region list as compact chip/pill navigation */
+  .sidebar-left .region-nav-title {
+    display: none;
+  }
+
+  .sidebar-left .region-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+  }
+
+  .sidebar-left .region-list-item {
+    margin-bottom: 0;
+  }
+
+  .sidebar-left .region-btn {
+    flex-direction: row;
+    align-items: center;
+    padding: var(--space-1) var(--space-3);
+    font-size: var(--text-sm);
+    border-radius: var(--radius-full);
+    gap: var(--space-1);
+  }
+
+  .sidebar-left .region-count {
+    font-size: var(--text-xs);
+  }
+
+  .sidebar-left .office-sublist {
+    display: none;
   }
 
   .map-section {
     order: 1;
-    min-height: 400px;
+    flex: 1;
+    min-height: 0;
   }
 
   .sidebar-right {
@@ -767,7 +809,7 @@ body {
     bottom: 0;
     left: 0;
     right: 0;
-    max-height: 50vh;
+    max-height: 40vh;
     border-left: none;
     border-top: 1px solid var(--color-border);
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
@@ -775,6 +817,8 @@ body {
     z-index: var(--z-panel);
     transform: translateY(100%);
     transition: transform var(--transition-normal);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .sidebar-right.open {
@@ -872,7 +916,10 @@ body {
   stroke-width: 2;
   cursor: pointer;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
-  transition: all 0.2s ease;
+  transition:
+    fill 0.2s ease,
+    filter 0.2s ease,
+    stroke-width 0.2s ease;
   transform-origin: center bottom;
 }
 
