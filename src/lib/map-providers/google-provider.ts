@@ -84,7 +84,7 @@ export class GoogleProvider implements TileMapProvider {
   private disposed = false;
   private markerClickHandler: ((officeCode: string) => void) | null = null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private clickListeners: Array<any> = [];
+  private eventListeners: Array<any> = [];
 
   constructor(apiKey: string) {
     this.apiKey = apiKey;
@@ -200,14 +200,14 @@ export class GoogleProvider implements TileMapProvider {
     this.disposed = true;
 
     // Remove all marker click listeners
-    for (const listener of this.clickListeners) {
+    for (const listener of this.eventListeners) {
       if (typeof listener === 'object' && listener !== null && 'remove' in listener) {
         listener.remove();
       } else if (this.gm?.event?.removeListener) {
         this.gm.event.removeListener(listener);
       }
     }
-    this.clickListeners = [];
+    this.eventListeners = [];
 
     // Remove markers
     if (this.marker) {
@@ -240,14 +240,14 @@ export class GoogleProvider implements TileMapProvider {
     this.markers = [];
 
     // Clear click listeners
-    for (const listener of this.clickListeners) {
+    for (const listener of this.eventListeners) {
       if (typeof listener === 'object' && listener !== null && 'remove' in listener) {
         listener.remove();
       } else if (this.gm?.event?.removeListener) {
         this.gm.event.removeListener(listener);
       }
     }
-    this.clickListeners = [];
+    this.eventListeners = [];
 
     // Remove single-location marker if present
     if (this.marker) {
@@ -275,16 +275,13 @@ export class GoogleProvider implements TileMapProvider {
           title: m.label,
         });
 
-        // Store office code for click handling
-        gMarker._officeCode = m.officeCode;
-
         // Wire click handler
         const listener = gMarker.addListener('click', () => {
           if (this.markerClickHandler) {
             this.markerClickHandler(m.officeCode);
           }
         });
-        this.clickListeners.push(listener);
+        this.eventListeners.push(listener);
         this.markers.push(gMarker);
       } else {
         const gMarker = new this.gm.Marker({
@@ -298,7 +295,7 @@ export class GoogleProvider implements TileMapProvider {
             this.markerClickHandler(m.officeCode);
           }
         });
-        this.clickListeners.push(listener);
+        this.eventListeners.push(listener);
         this.markers.push(gMarker);
       }
     }
@@ -310,7 +307,7 @@ export class GoogleProvider implements TileMapProvider {
     // This is a no-op for demo purposes, same as AppleProvider.
   }
 
-  fitBounds(markers: TileMapMarker[], _padding = 50, maxZoom = 10): void {
+  fitBounds(markers: TileMapMarker[], padding = 50, maxZoom = 10): void {
     if (!this.map || !this.gm || markers.length === 0) return;
 
     const bounds = new this.gm.LatLngBounds();
@@ -318,7 +315,7 @@ export class GoogleProvider implements TileMapProvider {
       bounds.extend({ lat: m.lat, lng: m.lon });
     }
 
-    this.map.fitBounds(bounds);
+    this.map.fitBounds(bounds, padding);
 
     // Enforce maxZoom after fitBounds
     const listener = this.gm.event.addListenerOnce(this.map, 'idle', () => {
@@ -326,7 +323,7 @@ export class GoogleProvider implements TileMapProvider {
         this.map.setZoom(maxZoom);
       }
     });
-    this.clickListeners.push(listener);
+    this.eventListeners.push(listener);
   }
 
   onMarkerClick(handler: (officeCode: string) => void): void {
