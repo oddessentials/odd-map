@@ -103,8 +103,11 @@ export class AppleProvider implements TileMapProvider {
     this.mapContainer.style.height = '100%';
     container.appendChild(this.mapContainer);
 
+    // ColorScheme enum may not be available in all MapKit JS CDN versions
     const colorScheme =
-      options.style === 'dark' ? this.mk.Map.ColorScheme.Dark : this.mk.Map.ColorScheme.Light;
+      options.style === 'dark'
+        ? (this.mk.Map.ColorScheme?.Dark ?? 'dark')
+        : (this.mk.Map.ColorScheme?.Light ?? 'light');
 
     this.map = new this.mk.Map(this.mapContainer, {
       center: new this.mk.Coordinate(0, 0),
@@ -256,7 +259,9 @@ export class AppleProvider implements TileMapProvider {
   setStyle(style: 'light' | 'dark'): void {
     if (!this.map || !this.mk || this.disposed) return;
     this.map.colorScheme =
-      style === 'dark' ? this.mk.Map.ColorScheme.Dark : this.mk.Map.ColorScheme.Light;
+      style === 'dark'
+        ? (this.mk.Map.ColorScheme?.Dark ?? 'dark')
+        : (this.mk.Map.ColorScheme?.Light ?? 'light');
   }
 
   getMapElement(): HTMLElement {
