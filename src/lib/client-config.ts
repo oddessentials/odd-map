@@ -151,6 +151,7 @@ export function getMapProviderConfig(): {
   appleMapToken?: string;
   googleMapsApiKey?: string;
   defaultZoom: number;
+  defaultTileStyle: 'light' | 'dark';
 } {
   const config = getActiveConfig();
   const mp = config.theme?.mapProvider;
@@ -160,6 +161,7 @@ export function getMapProviderConfig(): {
     appleMapToken: mp?.appleMapToken,
     googleMapsApiKey: mp?.googleMapsApiKey,
     defaultZoom: mp?.defaultZoom ?? 15,
+    defaultTileStyle: mp?.defaultTileStyle ?? 'light',
   };
 }
 

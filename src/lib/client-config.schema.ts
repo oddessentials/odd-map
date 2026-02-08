@@ -78,6 +78,7 @@ const MapProviderConfigSchema = z
     appleMapToken: z.string().optional(),
     googleMapsApiKey: z.string().optional(),
     defaultZoom: z.number().min(1).max(20).default(15),
+    defaultTileStyle: z.enum(['light', 'dark']).default('light'),
   })
   .optional();
 

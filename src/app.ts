@@ -23,6 +23,7 @@ import {
   getClientRegions,
   getClientRegion,
   getClientOffices,
+  getMapProviderConfig,
 } from './lib/client-config.js';
 import { getAvailableClients, getDefaultClient } from './lib/client-registry.js';
 import { computeMarkerStates } from './lib/marker-state.js';
@@ -162,6 +163,9 @@ class App {
       const config = await loadClientConfig(clientId);
       injectClientBranding(config);
       applyClientTheme(config.theme);
+
+      // Initialize tile style from client config (user toggle will override)
+      this.tileStyle = getMapProviderConfig().defaultTileStyle;
     } catch (err) {
       console.error(`Failed to load client config for "${clientId}":`, err);
       // Config is required — all data access functions depend on it

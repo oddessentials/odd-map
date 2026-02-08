@@ -49,7 +49,7 @@ export class TileMap {
       zoom: 4, // Start zoomed out to show all of US
       interactive: true,
       attributionControl: true,
-      style: 'light' as const, // Default to light basemap; can be toggled via setTileStyle()
+      style: (this.config.defaultTileStyle ?? 'light') as 'light' | 'dark',
     };
 
     try {

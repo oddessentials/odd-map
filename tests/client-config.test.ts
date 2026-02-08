@@ -11,7 +11,7 @@ import {
   MAX_SUPPORTED_SCHEMA_VERSION,
   formatValidationErrors,
 } from '../src/lib/client-config.schema';
-import { loadClientConfig, __resetConfig } from '../src/lib/client-config';
+import { loadClientConfig, getMapProviderConfig, __resetConfig } from '../src/lib/client-config';
 import { getClientConfigForClient } from '../src/lib/client-registry';
 
 vi.mock('../src/lib/client-registry', async (importOriginal) => {
@@ -797,6 +797,70 @@ describe('MapProviderConfig schema validation (T009)', () => {
     expect(result.success).toBe(false);
   });
 
+  it('accepts config with defaultTileStyle "dark"', () => {
+    const config = createValidConfig({
+      theme: {
+        mapProvider: {
+          provider: 'maplibre',
+          defaultZoom: 15,
+          defaultTileStyle: 'dark',
+        },
+      },
+    });
+    const result = ClientConfigSchema.safeParse(config);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.theme?.mapProvider?.defaultTileStyle).toBe('dark');
+    }
+  });
+
+  it('accepts config with defaultTileStyle "light"', () => {
+    const config = createValidConfig({
+      theme: {
+        mapProvider: {
+          provider: 'maplibre',
+          defaultZoom: 15,
+          defaultTileStyle: 'light',
+        },
+      },
+    });
+    const result = ClientConfigSchema.safeParse(config);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.theme?.mapProvider?.defaultTileStyle).toBe('light');
+    }
+  });
+
+  it('defaults defaultTileStyle to "light" when omitted', () => {
+    const config = createValidConfig({
+      theme: {
+        mapProvider: {
+          provider: 'maplibre',
+          defaultZoom: 15,
+        },
+      },
+    });
+    const result = ClientConfigSchema.safeParse(config);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.theme?.mapProvider?.defaultTileStyle).toBe('light');
+    }
+  });
+
+  it('rejects invalid defaultTileStyle value', () => {
+    const config = createValidConfig({
+      theme: {
+        mapProvider: {
+          provider: 'maplibre',
+          defaultZoom: 15,
+          defaultTileStyle: 'sepia',
+        },
+      },
+    });
+    const result = ClientConfigSchema.safeParse(config);
+    expect(result.success).toBe(false);
+  });
+
   it('accepts defaultZoom at boundary values (1 and 20)', () => {
     const configMin = createValidConfig({
       theme: {
@@ -811,5 +875,73 @@ describe('MapProviderConfig schema validation (T009)', () => {
       },
     });
     expect(ClientConfigSchema.safeParse(configMax).success).toBe(true);
+  });
+});
+
+describe('getMapProviderConfig() defaultTileStyle accessor', () => {
+  beforeEach(() => {
+    __resetConfig();
+    vi.restoreAllMocks();
+  });
+
+  it('returns defaultTileStyle "dark" when config specifies dark', async () => {
+    vi.mocked(getClientConfigForClient).mockResolvedValue(
+      createValidConfig({
+        theme: {
+          mapProvider: {
+            provider: 'maplibre',
+            defaultZoom: 15,
+            defaultTileStyle: 'dark',
+          },
+        },
+      })
+    );
+
+    await loadClientConfig('testclient');
+    const mpConfig = getMapProviderConfig();
+    expect(mpConfig.defaultTileStyle).toBe('dark');
+  });
+
+  it('returns defaultTileStyle "light" when config specifies light', async () => {
+    vi.mocked(getClientConfigForClient).mockResolvedValue(
+      createValidConfig({
+        theme: {
+          mapProvider: {
+            provider: 'maplibre',
+            defaultZoom: 15,
+            defaultTileStyle: 'light',
+          },
+        },
+      })
+    );
+
+    await loadClientConfig('testclient');
+    const mpConfig = getMapProviderConfig();
+    expect(mpConfig.defaultTileStyle).toBe('light');
+  });
+
+  it('defaults to "light" when defaultTileStyle is omitted from config', async () => {
+    vi.mocked(getClientConfigForClient).mockResolvedValue(
+      createValidConfig({
+        theme: {
+          mapProvider: {
+            provider: 'maplibre',
+            defaultZoom: 15,
+          },
+        },
+      })
+    );
+
+    await loadClientConfig('testclient');
+    const mpConfig = getMapProviderConfig();
+    expect(mpConfig.defaultTileStyle).toBe('light');
+  });
+
+  it('defaults to "light" when no theme is configured', async () => {
+    vi.mocked(getClientConfigForClient).mockResolvedValue(createValidConfig());
+
+    await loadClientConfig('testclient');
+    const mpConfig = getMapProviderConfig();
+    expect(mpConfig.defaultTileStyle).toBe('light');
   });
 });
