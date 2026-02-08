@@ -260,4 +260,74 @@ describe('MiniMap', () => {
     miniMap.expand();
     expect(mockProvider.getMapElement).not.toHaveBeenCalled();
   });
+
+  it('setTileStyle defaults to light', async () => {
+    const miniMap = new MiniMap(container);
+    const office = createTestOffice('TST1', 40.7, -74.0);
+
+    await miniMap.show(office, '#ff0000');
+
+    // Provider should be initialized with style: 'light' (the default)
+    expect(mockProvider.initialize).toHaveBeenCalledWith(
+      expect.any(HTMLElement),
+      expect.objectContaining({ style: 'light' })
+    );
+
+    miniMap.dispose();
+  });
+
+  it('setTileStyle delegates to provider.setStyle()', async () => {
+    const miniMap = new MiniMap(container);
+    const office = createTestOffice('TST1', 40.7, -74.0);
+
+    await miniMap.show(office, '#ff0000');
+
+    // Add setStyle mock to the provider
+    (mockProvider as Record<string, unknown>).setStyle = vi.fn();
+
+    miniMap.setTileStyle('dark');
+
+    expect((mockProvider as Record<string, unknown>).setStyle).toHaveBeenCalledWith('dark');
+
+    miniMap.dispose();
+  });
+
+  it('setTileStyle stores preference for future initialization', async () => {
+    const miniMap = new MiniMap(container);
+
+    // Set style before showing map
+    miniMap.setTileStyle('dark');
+
+    const office = createTestOffice('TST1', 40.7, -74.0);
+    await miniMap.show(office, '#ff0000');
+
+    // Provider should be initialized with the stored style preference
+    expect(mockProvider.initialize).toHaveBeenCalledWith(
+      expect.any(HTMLElement),
+      expect.objectContaining({ style: 'dark' })
+    );
+
+    miniMap.dispose();
+  });
+
+  it('setTileStyle is safe when provider has no setStyle', async () => {
+    const miniMap = new MiniMap(container);
+    const office = createTestOffice('TST1', 40.7, -74.0);
+
+    await miniMap.show(office, '#ff0000');
+
+    // Provider does not have setStyle by default in mock
+    expect(() => miniMap.setTileStyle('dark')).not.toThrow();
+
+    miniMap.dispose();
+  });
+
+  it('setTileStyle is safe before provider is initialized', () => {
+    const miniMap = new MiniMap(container);
+
+    // Should not throw when no provider exists
+    expect(() => miniMap.setTileStyle('dark')).not.toThrow();
+
+    miniMap.dispose();
+  });
 });

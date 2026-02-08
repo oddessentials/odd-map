@@ -1336,6 +1336,10 @@ body {
     border-bottom-color: #2d2d44;
   }
 
+  .office-subbtn {
+    color: #e0e0e0;
+  }
+
   .office-subbtn:hover {
     background: #252540;
   }
@@ -1450,11 +1454,21 @@ body {
     color: #e0e0e0;
   }
 
+  /* "No address" / "No offices" fallback text */
+  .no-address,
+  .no-offices {
+    color: #b0b0b0;
+  }
+
   /* Specialty section dark styles */
   .specialty-section {
     background: #1a1a2e;
     border-top-color: #2d2d44;
     color: #e0e0e0;
+  }
+
+  .specialty-panel-title {
+    color: #7ba3d4;
   }
 
   .specialty-panel-desc {
@@ -1465,12 +1479,17 @@ body {
     background: #252540;
   }
 
+  .accordion-header {
+    color: #e0e0e0;
+  }
+
   .accordion-header:hover {
     background: #2d2d50;
   }
 
   .accordion-content {
     border-top-color: #3a3a55;
+    color: #e0e0e0;
   }
 
   .personnel-card {
@@ -1483,6 +1502,21 @@ body {
 
   .personnel-title {
     color: #b0b0b0;
+  }
+
+  /* Specialty section links and buttons */
+  .specialty-section .contact-link {
+    color: #b0c4de;
+  }
+
+  .specialty-section .btn-secondary {
+    background: #2d2d44;
+    color: #e0e0e0;
+    border-color: #3a3a55;
+  }
+
+  .specialty-section .btn-secondary:hover {
+    background: #3a3a55;
   }
 
   /* Loading screen dark */

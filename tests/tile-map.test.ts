@@ -293,6 +293,37 @@ describe('TileMap', () => {
     tileMap.dispose();
   });
 
+  it('setTileStyle delegates to provider.setStyle()', async () => {
+    const tileMap = new TileMap(container, {});
+    await tileMap.init();
+
+    // Add setStyle mock to the provider
+    (mockProvider as Record<string, unknown>).setStyle = vi.fn();
+
+    tileMap.setTileStyle('dark');
+
+    expect((mockProvider as Record<string, unknown>).setStyle).toHaveBeenCalledWith('dark');
+
+    tileMap.dispose();
+  });
+
+  it('setTileStyle is no-op before init', () => {
+    const tileMap = new TileMap(container, {});
+    // Should not throw
+    tileMap.setTileStyle('dark');
+    tileMap.dispose();
+  });
+
+  it('setTileStyle is safe when provider has no setStyle', async () => {
+    const tileMap = new TileMap(container, {});
+    await tileMap.init();
+
+    // Provider does not have setStyle by default in mock
+    expect(() => tileMap.setTileStyle('dark')).not.toThrow();
+
+    tileMap.dispose();
+  });
+
   it('handles dispose during init gracefully', async () => {
     const slowProvider = createMockProvider();
     (slowProvider.initialize as ReturnType<typeof vi.fn>).mockImplementation(
