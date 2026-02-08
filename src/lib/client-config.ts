@@ -19,6 +19,17 @@ import { getClientConfigForClient } from './client-registry.js';
 
 let activeConfig: ValidatedClientConfig | null = null;
 
+// Memoization caches — invalidated when config changes
+let cachedOffices: OfficeWithRegion[] | null = null;
+let cachedRegions: Region[] | null = null;
+let cachedRegionMap: Map<string, Region> | null = null;
+
+function invalidateCaches(): void {
+  cachedOffices = null;
+  cachedRegions = null;
+  cachedRegionMap = null;
+}
+
 /**
  * Load and validate the client configuration for the given client ID.
  * Caches the loaded config for the session (one client per page load).
@@ -44,6 +55,7 @@ export async function loadClientConfig(clientId: string): Promise<ValidatedClien
   }
 
   activeConfig = result.data;
+  invalidateCaches();
   return activeConfig;
 }
 
@@ -60,22 +72,27 @@ export function getActiveConfig(): ValidatedClientConfig {
 
 /**
  * Get all offices from the active config as a flat array with regionName attached.
- * Replaces getAllOffices() from locations.js.
+ * Memoized — result is cached until config changes.
  */
 export function getClientOffices(): OfficeWithRegion[] {
+  if (cachedOffices) return cachedOffices;
+
   const config = getActiveConfig();
-  return config.offices.map((office) => ({
+  cachedOffices = config.offices.map((office) => ({
     ...office,
     regionName: office.region,
   }));
+  return cachedOffices;
 }
 
 /**
  * Reconstruct region objects from the active config by grouping
  * offices and personnel by region name.
- * Replaces the `regions` export from locations.js.
+ * Memoized — result is cached until config changes.
  */
 export function getClientRegions(): Region[] {
+  if (cachedRegions) return cachedRegions;
+
   const config = getActiveConfig();
 
   const regionMap = new Map<string, { offices: Office[]; personnel: Personnel[] }>();
@@ -96,19 +113,23 @@ export function getClientRegions(): Region[] {
     }
   }
 
-  return Array.from(regionMap.entries()).map(([name, data]) => ({
+  cachedRegions = Array.from(regionMap.entries()).map(([name, data]) => ({
     name,
     offices: data.offices,
     personnel: data.personnel,
   }));
+  return cachedRegions;
 }
 
 /**
  * Get a single region by name.
- * Replaces getRegion() from locations.js.
+ * Uses a memoized Map for O(1) lookup instead of linear scan.
  */
 export function getClientRegion(regionName: string): Region | undefined {
-  return getClientRegions().find((r) => r.name === regionName);
+  if (!cachedRegionMap) {
+    cachedRegionMap = new Map(getClientRegions().map((r) => [r.name, r]));
+  }
+  return cachedRegionMap.get(regionName);
 }
 
 /**
@@ -160,4 +181,5 @@ export function validateRegionReferences(mapConfigRegionNames: string[]): void {
  */
 export function __resetConfig(): void {
   activeConfig = null;
+  invalidateCaches();
 }

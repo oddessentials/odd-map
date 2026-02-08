@@ -5,7 +5,7 @@
  * Includes: name, type, address, contacts, action buttons.
  */
 
-import { escapeHtml } from '../lib/escape-html.js';
+import { escapeHtml, sanitizeUrl } from '../lib/escape-html.js';
 import { getActiveConfig } from '../lib/client-config.js';
 import { MiniMap } from './mini-map.js';
 
@@ -174,7 +174,7 @@ export class DetailsPanel {
             <div class="contact-title">${escapeHtml(manager.title)}</div>
             ${manager.phone ? `<div class="contact-phone"><a href="tel:${escapeHtml(manager.phone)}">${escapeHtml(manager.phone)}</a></div>` : ''}
             ${manager.email ? `<div class="contact-email"><a href="mailto:${escapeHtml(manager.email)}">${escapeHtml(manager.email)}</a></div>` : ''}
-            ${manager.vcardUrl ? `<a href="${manager.vcardUrl}" class="btn btn-secondary btn-sm" target="_blank" rel="noopener">Download vCard</a>` : ''}
+            ${manager.vcardUrl ? `<a href="${sanitizeUrl(manager.vcardUrl)}" class="btn btn-secondary btn-sm" target="_blank" rel="noopener">Download vCard</a>` : ''}
           </div>
         </div>
       `;
@@ -255,7 +255,7 @@ export class DetailsPanel {
           <div class="office-address">
             <h4>Address</h4>
             <address>${escapeHtml(office.address)}</address>
-            <a href="${office.directionsUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(office.address)}`}" class="btn btn-accent" target="_blank" rel="noopener">
+            <a href="${sanitizeUrl(office.directionsUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(office.address)}`)}" class="btn btn-accent" target="_blank" rel="noopener">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
                 <circle cx="12" cy="10" r="3"></circle>
@@ -285,7 +285,7 @@ export class DetailsPanel {
             ${
               manager.vcardUrl
                 ? `
-              <a href="${manager.vcardUrl}" class="btn btn-secondary btn-sm" target="_blank" rel="noopener">
+              <a href="${sanitizeUrl(manager.vcardUrl)}" class="btn btn-secondary btn-sm" target="_blank" rel="noopener">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
                   <polyline points="17 21 17 13 7 13 7 21"></polyline>

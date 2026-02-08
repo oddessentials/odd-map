@@ -265,11 +265,18 @@ export class Map3D {
       worldPos: new THREE.Vector3(),
       toMarker: new THREE.Vector3(),
       cameraDir: new THREE.Vector3(),
+      normalizedWorldPos: new THREE.Vector3(),
     };
 
     // Performance: throttle expensive visibility updates (250ms)
     this._lastExpensiveUpdate = 0;
     this._expensiveUpdateInterval = 250;
+
+    // Debounce timer for resize events
+    this._resizeTimeout = null;
+
+    // Cached interactive objects (halos portion - static after init)
+    this._cachedHalos = null;
 
     // Tooltip element
     this.tooltip = null;
@@ -642,21 +649,27 @@ export class Map3D {
   /**
    * Get interactive objects for click/hover raycasting.
    * IMPORTANT: Excludes earth mesh and decorations.
+   * Caches the static halo array and rebuilds only the visible marker list.
    */
   getInteractiveObjects() {
-    const objects = [];
+    // Cache the static region halos array (doesn't change after init)
+    if (!this._cachedHalos) {
+      this._cachedHalos = [];
+      this.regionHalos.forEach((halo) => {
+        this._cachedHalos.push(halo);
+      });
+    }
 
-    // Add visible markers
+    // Build array of visible markers + static halos
+    const objects = [];
     this.markerMeshes.forEach((marker) => {
       if (marker.visible) {
         objects.push(marker);
       }
     });
-
-    // Add region halos (invisible but interactable)
-    this.regionHalos.forEach((halo) => {
-      objects.push(halo);
-    });
+    for (let i = 0; i < this._cachedHalos.length; i++) {
+      objects.push(this._cachedHalos[i]);
+    }
 
     return objects;
   }
@@ -761,12 +774,19 @@ export class Map3D {
   }
 
   onResize() {
-    const width = this.container.clientWidth;
-    const height = this.container.clientHeight;
+    // Debounce: avoid expensive projection recalculation on every resize event
+    if (this._resizeTimeout) clearTimeout(this._resizeTimeout);
+    this._resizeTimeout = setTimeout(() => {
+      this._resizeTimeout = null;
+      if (!this.container || !this.camera || !this.renderer) return;
+      const width = this.container.clientWidth;
+      const height = this.container.clientHeight;
+      if (width === 0 || height === 0) return;
 
-    this.camera.aspect = width / height;
-    this.camera.updateProjectionMatrix();
-    this.renderer.setSize(width, height);
+      this.camera.aspect = width / height;
+      this.camera.updateProjectionMatrix();
+      this.renderer.setSize(width, height);
+    }, 100);
   }
 
   /**
@@ -782,7 +802,7 @@ export class Map3D {
     // Skip during animation to prevent freeze
     if (this.animating) return;
 
-    const { worldPos, toMarker } = this._tempVectors;
+    const { worldPos, toMarker, normalizedWorldPos } = this._tempVectors;
     const cameraPosition = this.camera.position;
 
     this.markerMeshes.forEach((marker, _code) => {
@@ -806,7 +826,8 @@ export class Map3D {
       // Backface culling: hide markers behind globe
       // Uses hysteresis to prevent flickering at visibility boundary
       toMarker.copy(worldPos).sub(cameraPosition).normalize();
-      const dotProduct = toMarker.dot(worldPos.clone().normalize());
+      normalizedWorldPos.copy(worldPos).normalize();
+      const dotProduct = toMarker.dot(normalizedWorldPos);
 
       // Apply hysteresis logic (exported as computeMarkerVisibility for testability)
       marker.visible = computeMarkerVisibility(marker.visible, dotProduct);
@@ -1067,6 +1088,12 @@ export class Map3D {
     try {
       // Cancel any in-progress camera animation first
       this.cancelAnimation();
+
+      // Cancel debounced resize
+      if (this._resizeTimeout) {
+        clearTimeout(this._resizeTimeout);
+        this._resizeTimeout = null;
+      }
 
       // Cancel animation loop
       if (this.animationFrameId) {

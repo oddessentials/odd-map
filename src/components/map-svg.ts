@@ -210,6 +210,9 @@ export class MapSvg {
   private markersReady: boolean = false;
   private pendingRegionSelection: string | null = null;
 
+  // Cache: officeCode -> { group, marker } for O(1) updateMarkerStates lookups
+  private markerCache: Map<string, { group: SVGGElement; marker: Element }> = new Map();
+
   constructor(container: HTMLElement, options: MapOptions = {}) {
     this.container = container;
     this.options = {
@@ -447,6 +450,7 @@ export class MapSvg {
         markerGroup.appendChild(hitArea);
         markerGroup.appendChild(marker);
         markersGroup.appendChild(markerGroup);
+        this.markerCache.set(office.officeCode, { group: markerGroup, marker });
         successCount++;
       } catch (err) {
         // LOUD FAILURE: Missing coordinate
@@ -834,20 +838,16 @@ export class MapSvg {
 
   /**
    * Apply centralized marker visual states from computeMarkerStates().
-   * Adds/removes CSS classes for styling via stylesheet.
+   * Uses cached element references for O(1) lookups instead of DOM queries.
    */
   updateMarkerStates(states: MarkerVisualState[]): void {
     if (!this.svgElement) return;
 
     for (const state of states) {
-      const group = this.svgElement.querySelector<SVGGElement>(
-        `.marker-group[data-office-code="${state.officeCode}"]`
-      );
-      if (!group) continue;
+      const cached = this.markerCache.get(state.officeCode);
+      if (!cached) continue;
 
-      const marker = group.querySelector('.marker');
-      if (!marker) continue;
-
+      const { marker } = cached;
       marker.classList.toggle('marker--selected', state.selected);
       marker.classList.toggle('marker--highlighted', state.highlighted);
       marker.classList.toggle('marker--dimmed', state.dimmed);
