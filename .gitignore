@@ -16,6 +16,9 @@ data/locations_raw.json
 data/locations_geocoded.json
 data/.geocode_cache.json
 
+# Apple private keys (MapKit .p8 auth keys)
+*.p8
+
 # OS
 .DS_Store
 Thumbs.db

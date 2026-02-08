@@ -42,16 +42,17 @@ To add a new client, create two JSON files in `config/` and register the client 
 
 ## Commands
 
-| Command             | Description                                                         |
-| ------------------- | ------------------------------------------------------------------- |
-| `npm run dev`       | Start Vite dev server                                               |
-| `npm run build`     | Production build to `dist/`                                         |
-| `npm run verify`    | Full CI check — lint, format, typecheck, client verification, tests |
-| `npm test`          | Run 608 tests in watch mode (Vitest)                                |
-| `npm run test:ci`   | Verify all clients + run tests once                                 |
-| `npm run typecheck` | TypeScript type checking                                            |
-| `npm run lint`      | ESLint check                                                        |
-| `npm run format`    | Prettier format                                                     |
+| Command                                 | Description                                                         |
+| --------------------------------------- | ------------------------------------------------------------------- |
+| `npm run dev`                           | Start Vite dev server                                               |
+| `npm run build`                         | Production build to `dist/`                                         |
+| `npm run verify`                        | Full CI check — lint, format, typecheck, client verification, tests |
+| `npm test`                              | Run 608 tests in watch mode (Vitest)                                |
+| `npm run test:ci`                       | Verify all clients + run tests once                                 |
+| `npm run typecheck`                     | TypeScript type checking                                            |
+| `npm run lint`                          | ESLint check                                                        |
+| `npm run format`                        | Prettier format                                                     |
+| `node scripts/generate-mapkit-token.js` | Generate Apple MapKit JWT from `.p8` key                            |
 
 ## Project Structure
 
@@ -63,6 +64,7 @@ odd-map/
 │   ├── {client}-client.json        # Branding: name, logo, theme colors
 │   └── {client}-map-config.json    # Data: offices, regions, coordinates
 ├── scripts/                  # Build, data pipeline & verification
+│   ├── generate-mapkit-token.js    # Generate Apple MapKit JWT from .p8 key
 │   ├── scrape_locations.py         # Scrape office data from website
 │   ├── geocode_locations.py        # Geocode addresses to lat/lon
 │   ├── generate_data_artifact.py   # Generate config from scraped data
@@ -140,8 +142,26 @@ API keys are stored directly in the client config JSON files. Since this is a st
 
 **For Apple MapKit:**
 
-1. Generate a Maps JWT token from your [Apple Developer account](https://developer.apple.com/account/)
-2. Add `"appleMapToken": "<your-jwt>"` to your client config's `theme.mapProvider`
+Apple MapKit requires a signed JWT token (not the raw `.p8` private key). Use the included generator script:
+
+1. Download your MapKit private key (`.p8` file) from [Apple Developer > Keys](https://developer.apple.com/account/resources/authkeys/list)
+2. Find your **Team ID** on the [Membership page](https://developer.apple.com/account#MembershipDetailsCard) and **Key ID** from the key filename or Keys page
+3. Generate the token:
+
+```bash
+node scripts/generate-mapkit-token.js \
+  --teamId ABCD1234EF \
+  --keyId A56J59A23Y \
+  --keyFile ~/AuthKey_A56J59A23Y.p8
+```
+
+4. Paste the output JWT into your client config's `theme.mapProvider`:
+
+```json
+"appleMapToken": "eyJhbGciOiJFUzI1NiIs..."
+```
+
+> **Note:** The `.p8` file is your private key — keep it safe and never commit it (it's in `.gitignore`). The generated JWT is safe for client-side use; it expires after 180 days by default (configurable via `--expiry`).
 
 **For Google Maps:**
 
