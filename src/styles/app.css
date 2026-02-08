@@ -692,6 +692,11 @@ body {
   margin-top: var(--space-2);
 }
 
+/* Apple MapKit marker annotations — add pointer cursor for clickable markers */
+.mk-marker {
+  cursor: pointer;
+}
+
 /* Branded map marker (used by MapLibre provider) */
 .minimap-marker {
   display: flex;
