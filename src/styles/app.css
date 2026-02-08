@@ -17,6 +17,7 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  min-height: 100dvh; /* Dynamic viewport height: excludes mobile browser chrome */
   overflow-x: hidden;
 }
 
@@ -974,7 +975,7 @@ body {
   .map-section {
     order: 1;
     flex: 1;
-    min-height: 0;
+    min-height: 200px;
   }
 
   /* Bottom sheet (right sidebar on mobile) */

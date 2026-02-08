@@ -75,6 +75,10 @@ class App {
   private modeSelector: HTMLElement | null;
   private spinBtn: HTMLElement | null;
 
+  // Bound event handlers for cleanup
+  private boundHashChange: (() => void) | null = null;
+  private boundKeydown: ((e: KeyboardEvent) => void) | null = null;
+
   constructor() {
     // Rendering mode: default to Tile
     this.mapMode = 'tile';
@@ -207,10 +211,12 @@ class App {
 
     // Handle URL hash for deep linking
     this.handleHashChange();
-    window.addEventListener('hashchange', () => this.handleHashChange());
+    this.boundHashChange = () => this.handleHashChange();
+    window.addEventListener('hashchange', this.boundHashChange);
 
     // Keyboard navigation
-    document.addEventListener('keydown', (e) => this.handleKeydown(e));
+    this.boundKeydown = (e: KeyboardEvent) => this.handleKeydown(e);
+    document.addEventListener('keydown', this.boundKeydown);
 
     // Hide loading screen ONLY after map is fully initialized
     const loadingScreen = document.getElementById('loading-screen');
@@ -557,7 +563,14 @@ class App {
     if (this.map?.dispose) {
       this.map.dispose();
     }
-    // Future: add panel/listener cleanup if needed
+    if (this.boundHashChange) {
+      window.removeEventListener('hashchange', this.boundHashChange);
+      this.boundHashChange = null;
+    }
+    if (this.boundKeydown) {
+      document.removeEventListener('keydown', this.boundKeydown);
+      this.boundKeydown = null;
+    }
   }
 }
 

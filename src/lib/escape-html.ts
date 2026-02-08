@@ -15,3 +15,26 @@ export function escapeHtml(str: string): string {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 }
+
+/**
+ * Sanitize a URL for safe use in href attributes.
+ * Allows only http:, https:, mailto:, and tel: protocols.
+ * Returns empty string for invalid or dangerous URLs (e.g., javascript:).
+ */
+export function sanitizeUrl(url: string): string {
+  try {
+    const parsed = new URL(url, 'https://placeholder.invalid');
+    const protocol = parsed.protocol.toLowerCase();
+    if (
+      protocol === 'https:' ||
+      protocol === 'http:' ||
+      protocol === 'mailto:' ||
+      protocol === 'tel:'
+    ) {
+      return escapeHtml(url);
+    }
+    return '';
+  } catch {
+    return '';
+  }
+}
