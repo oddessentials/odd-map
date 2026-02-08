@@ -346,13 +346,9 @@ class App {
       this.updateSpinButton(); // Reset visual state (autoRotate defaults to false)
       this.updateTileStyleButton(); // Sync toggle button visual state
 
-      // Restore tile style preference when switching back to tile mode
-      if (
-        mode === 'tile' &&
-        this.tileStyle !== 'light' &&
-        this.map &&
-        typeof (this.map as TileMap).setTileStyle === 'function'
-      ) {
+      // Restore tile style preference when switching back to tile mode.
+      // Always apply — user's toggle may differ from the config default.
+      if (mode === 'tile' && this.map && typeof (this.map as TileMap).setTileStyle === 'function') {
         (this.map as TileMap).setTileStyle(this.tileStyle);
       }
 
