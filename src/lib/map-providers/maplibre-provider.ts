@@ -2,7 +2,7 @@
  * MapLibre GL JS Provider
  *
  * Implements MapProvider interface using MapLibre GL JS
- * with OpenFreeMap vector tiles (no API key required).
+ * with CartoDB basemap tiles (no API key required).
  * Library is lazy-loaded via dynamic import on first use.
  */
 
@@ -15,10 +15,10 @@ import type {
   MarkerVisualState,
 } from './types.js';
 
-// Default OpenFreeMap style URLs
+// Default basemap style URLs (CartoDB — free, no API key, excellent data-viz contrast)
 const STYLE_URLS = {
-  light: 'https://tiles.openfreemap.org/styles/liberty',
-  dark: 'https://tiles.openfreemap.org/styles/dark',
+  light: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
+  dark: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
 } as const;
 
 // Cached module reference after first dynamic import
@@ -225,19 +225,22 @@ export class MapLibreProvider implements TileMapProvider {
       clusterRadius: 50,
     });
 
-    // Cluster circle layer
+    // Cluster circle layer — warm brand-aligned gradient for visibility
     this.map.addLayer({
       id: 'clusters',
       type: 'circle',
       source: this.markersSourceId,
       filter: ['has', 'point_count'],
       paint: {
-        'circle-color': ['step', ['get', 'point_count'], '#51bbd6', 10, '#f1f075', 30, '#f28cb1'],
-        'circle-radius': ['step', ['get', 'point_count'], 20, 10, 30, 30, 40],
+        'circle-color': ['step', ['get', 'point_count'], '#2a6db5', 10, '#3580c8', 30, '#4a90d9'],
+        'circle-radius': ['step', ['get', 'point_count'], 22, 10, 32, 30, 42],
+        'circle-stroke-width': 2,
+        'circle-stroke-color': '#ffffff',
+        'circle-opacity': 0.9,
       },
     });
 
-    // Cluster count label layer
+    // Cluster count label layer — white text with halo for readability
     this.map.addLayer({
       id: 'cluster-count',
       type: 'symbol',
@@ -245,20 +248,26 @@ export class MapLibreProvider implements TileMapProvider {
       filter: ['has', 'point_count'],
       layout: {
         'text-field': '{point_count_abbreviated}',
-        'text-size': 12,
+        'text-size': 13,
+        'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+      },
+      paint: {
+        'text-color': '#ffffff',
+        'text-halo-color': 'rgba(0, 0, 0, 0.3)',
+        'text-halo-width': 1,
       },
     });
 
-    // Individual (unclustered) marker layer
+    // Individual (unclustered) marker layer — larger with stroke for visibility
     this.map.addLayer({
       id: 'unclustered-point',
       type: 'circle',
       source: this.markersSourceId,
       filter: ['!', ['has', 'point_count']],
       paint: {
-        'circle-color': ['get', 'color'],
-        'circle-radius': 8,
-        'circle-stroke-width': 2,
+        'circle-color': '#0066cc',
+        'circle-radius': 9,
+        'circle-stroke-width': 2.5,
         'circle-stroke-color': '#ffffff',
         'circle-opacity': ['case', ['boolean', ['feature-state', 'dimmed'], false], 0.4, 1],
       },
@@ -354,14 +363,14 @@ export class MapLibreProvider implements TileMapProvider {
     }
   }
 
-  fitBounds(markers: TileMapMarker[], padding = 50): void {
+  fitBounds(markers: TileMapMarker[], padding = 50, maxZoom = 10): void {
     if (!this.map || !maplibreModule || markers.length === 0) return;
 
     const bounds = new maplibreModule.LngLatBounds();
     for (const m of markers) {
       bounds.extend([m.lon, m.lat]);
     }
-    this.map.fitBounds(bounds, { padding, duration: 1000 });
+    this.map.fitBounds(bounds, { padding, maxZoom, duration: 1000 });
   }
 
   onMarkerClick(handler: (officeCode: string) => void): void {
