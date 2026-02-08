@@ -206,6 +206,7 @@ class App {
       this.tileStyleBtn.addEventListener('click', () => this.handleTileStyleToggle());
     }
     this.updateTileStyleButtonVisibility();
+    this.updateTileStyleButton();
 
     // Sidebar collapse toggles (desktop only)
     if (this.collapseLeftBtn) {
