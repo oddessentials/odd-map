@@ -71,6 +71,9 @@ export interface MapProvider {
 
   /** Get the underlying map element for DOM reparenting (expand/collapse) */
   getMapElement(): HTMLElement;
+
+  /** Switch the basemap style (light/dark) on an already-initialized map */
+  setStyle?(style: 'light' | 'dark'): void;
 }
 
 /**

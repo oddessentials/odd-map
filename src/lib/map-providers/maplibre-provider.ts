@@ -33,6 +33,9 @@ export class MapLibreProvider implements TileMapProvider {
   private markerClickHandler: ((officeCode: string) => void) | null = null;
   private markersSourceId = 'office-markers';
   private markersLoaded = false;
+  private pendingMarkers: TileMapMarker[] = [];
+  private currentStyle: 'light' | 'dark' = 'light';
+  private styleGeneration = 0;
   private markerEventHandlers: Array<{
     event: string;
     layer: string;
@@ -59,7 +62,8 @@ export class MapLibreProvider implements TileMapProvider {
     this.mapContainer.style.height = '100%';
     container.appendChild(this.mapContainer);
 
-    const styleUrl = this.customStyleUrl ?? STYLE_URLS[options.style ?? 'light'];
+    this.currentStyle = options.style ?? 'light';
+    const styleUrl = this.customStyleUrl ?? STYLE_URLS[this.currentStyle];
 
     this.map = new maplibreModule.Map({
       container: this.mapContainer,
@@ -188,6 +192,9 @@ export class MapLibreProvider implements TileMapProvider {
 
   setMarkers(markers: TileMapMarker[]): void {
     if (!this.map || !maplibreModule) return;
+
+    // Store markers for replay after style switch
+    this.pendingMarkers = markers;
 
     // Build GeoJSON feature collection
     const geojson: GeoJSON.FeatureCollection = {
@@ -375,6 +382,48 @@ export class MapLibreProvider implements TileMapProvider {
 
   onMarkerClick(handler: (officeCode: string) => void): void {
     this.markerClickHandler = handler;
+  }
+
+  setStyle(style: 'light' | 'dark'): void {
+    if (!this.map || this.disposed) return;
+    if (style === this.currentStyle) return;
+
+    this.currentStyle = style;
+    const styleUrl = this.customStyleUrl ?? STYLE_URLS[style];
+
+    // setStyle() removes all sources and layers — re-add after load
+    this.markersLoaded = false;
+    this.removeMarkerEventHandlers();
+
+    // Increment generation to discard stale style.load callbacks from rapid switches
+    const gen = ++this.styleGeneration;
+
+    this.map.setStyle(styleUrl);
+
+    // Track error handler so style.load can cancel it (and vice versa)
+    const previousStyle = style === 'dark' ? 'light' : 'dark';
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const onError = (e: any) => {
+      if (this.disposed || !this.map || gen !== this.styleGeneration) return;
+      console.warn('[MapLibre] Style load failed, reverting to', previousStyle, e.error?.message);
+      this.currentStyle = previousStyle;
+      const fallbackUrl = this.customStyleUrl ?? STYLE_URLS[previousStyle];
+      this.map.setStyle(fallbackUrl);
+    };
+
+    const onStyleLoad = () => {
+      // Cancel error handler — style loaded successfully
+      this.map?.off('error', onError);
+      if (this.disposed || !this.map || gen !== this.styleGeneration) return;
+      // Re-add markers if any were previously set
+      if (this.pendingMarkers.length > 0) {
+        this.setMarkers(this.pendingMarkers);
+      }
+    };
+
+    this.map.once('style.load', onStyleLoad);
+    this.map.once('error', onError);
   }
 
   getMapElement(): HTMLElement {

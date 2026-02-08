@@ -1059,6 +1059,11 @@ body {
     min-height: 44px;
   }
 
+  .tile-style-toggle {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
   .specialty-accordion {
     grid-template-columns: 1fr;
   }
@@ -1229,6 +1234,276 @@ body {
 .tile-map-container {
   width: 100%;
   height: 100%;
+}
+
+/* Tile style toggle (Tile mode only) */
+.tile-style-toggle[hidden] {
+  display: none;
+}
+
+.tile-style-toggle {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 48px;
+  color: var(--color-text-inverse);
+  border-color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.1);
+  transition: all var(--transition-fast);
+}
+
+.tile-style-toggle:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.8);
+  transform: scale(1.05);
+}
+
+.tile-style-toggle.active {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.tile-style-toggle.active:hover:not(:disabled) {
+  background: var(--color-accent-hover, var(--color-accent-dark));
+  border-color: var(--color-accent-hover, var(--color-accent-dark));
+}
+
+/* Sun/moon icon swap based on active state */
+.tile-style-toggle .icon-moon {
+  display: none;
+}
+
+.tile-style-toggle.active .icon-sun {
+  display: none;
+}
+
+.tile-style-toggle.active .icon-moon {
+  display: block;
+}
+
+/* ============================================
+   DARK THEME — SIDEBARS & FOOTER ONLY
+   Activated by OS dark mode preference.
+   Does NOT affect the map section or header.
+   ============================================ */
+
+@media (prefers-color-scheme: dark) {
+  .sidebar-left,
+  .sidebar-right {
+    background: #1a1a2e;
+    color: #e0e0e0;
+    border-color: #2d2d44;
+  }
+
+  .sidebar-left {
+    border-right-color: #2d2d44;
+  }
+
+  .sidebar-right {
+    border-left-color: #2d2d44;
+  }
+
+  /* Region list dark styles */
+  .region-nav-title {
+    color: #7ba3d4;
+  }
+
+  .region-btn {
+    background: #252540;
+    border-color: #3a3a55;
+    color: #e0e0e0;
+  }
+
+  .region-btn:hover {
+    background: var(--color-primary);
+    color: var(--color-text-inverse);
+    border-color: var(--color-primary);
+  }
+
+  .region-list-item.expanded .region-btn {
+    background: var(--color-primary);
+    color: var(--color-text-inverse);
+    border-color: var(--color-primary);
+  }
+
+  .office-sublist {
+    background: #1e1e36;
+    border-color: var(--color-primary);
+  }
+
+  .office-subitem {
+    border-bottom-color: #2d2d44;
+  }
+
+  .office-subbtn:hover {
+    background: #252540;
+  }
+
+  /* Details panel dark styles */
+  .panel-header {
+    border-bottom-color: #2d2d44;
+  }
+
+  .panel-title {
+    color: #7ba3d4;
+  }
+
+  .panel-placeholder {
+    color: #b0b0b0;
+  }
+
+  .contact-card {
+    background: #252540;
+  }
+
+  .contact-name {
+    color: #7ba3d4;
+  }
+
+  .contact-title {
+    color: #b0b0b0;
+  }
+
+  .office-btn {
+    background: #252540;
+    border-color: #3a3a55;
+    color: #e0e0e0;
+  }
+
+  .office-btn:hover {
+    border-color: var(--color-accent);
+  }
+
+  .office-btn .office-code {
+    color: #b0b0b0;
+  }
+
+  .office-btn .office-type {
+    color: #a0a0a0;
+  }
+
+  .office-logo-slot {
+    background: var(--color-primary);
+  }
+
+  .office-type-badge {
+    background: #252540;
+    color: #e0e0e0;
+  }
+
+  .office-address h4,
+  .office-contact h4,
+  .office-list h3,
+  .region-manager h3 {
+    color: #b0b0b0;
+  }
+
+  .office-address address {
+    color: #e0e0e0;
+  }
+
+  .coord-warning {
+    background: #252540;
+    color: #b0b0b0;
+  }
+
+  .office-contact {
+    background: #252540;
+  }
+
+  /* Secondary buttons in dark context */
+  .sidebar-left .btn-secondary,
+  .sidebar-right .btn-secondary {
+    background: #2d2d44;
+    color: #e0e0e0;
+    border-color: #3a3a55;
+  }
+
+  .sidebar-left .btn-secondary:hover,
+  .sidebar-right .btn-secondary:hover {
+    background: #3a3a55;
+  }
+
+  /* Footer dark styles */
+  .footer {
+    background: #1a1a2e;
+    border-top-color: #2d2d44;
+    color: #e0e0e0;
+  }
+
+  .footer-label {
+    color: #7ba3d4;
+  }
+
+  .footer-copyright {
+    color: #a0a0a0;
+  }
+
+  .footer-links a,
+  .footer-phone,
+  .footer-email {
+    color: #b0c4de;
+  }
+
+  .footer-links a:hover {
+    color: #e0e0e0;
+  }
+
+  /* Specialty section dark styles */
+  .specialty-section {
+    background: #1a1a2e;
+    border-top-color: #2d2d44;
+    color: #e0e0e0;
+  }
+
+  .specialty-panel-desc {
+    color: #b0b0b0;
+  }
+
+  .accordion-item {
+    background: #252540;
+  }
+
+  .accordion-header:hover {
+    background: #2d2d50;
+  }
+
+  .accordion-content {
+    border-top-color: #3a3a55;
+  }
+
+  .personnel-card {
+    background: #1e1e36;
+  }
+
+  .personnel-name {
+    color: #7ba3d4;
+  }
+
+  .personnel-title {
+    color: #b0b0b0;
+  }
+
+  /* Loading screen dark */
+  .loading-screen {
+    background: #1a1a2e;
+  }
+
+  .loading-text {
+    color: #b0b0b0;
+  }
+
+  /* Mobile bottom sheet dark */
+  @media (max-width: 768px) {
+    .sidebar-right {
+      box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4);
+    }
+
+    .sidebar-right::before {
+      background: #3a3a55;
+    }
+  }
 }
 
 /* Reduced motion preference */

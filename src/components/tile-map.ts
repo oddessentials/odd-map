@@ -142,6 +142,11 @@ export class TileMap {
     this.provider.updateMarkerStates(states);
   }
 
+  setTileStyle(style: 'light' | 'dark'): void {
+    if (!this.provider) return;
+    this.provider.setStyle?.(style);
+  }
+
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;

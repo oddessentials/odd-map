@@ -21,6 +21,7 @@ export class MiniMap {
   private currentOfficeCode: string | null = null;
   private lastOffice: Office | null = null;
   private lastBrandColor: string = '#00396c';
+  private tileStyle: 'light' | 'dark' = 'light';
   private initializing = false;
   private disposed = false;
   private resizeObserver: ResizeObserver | null = null;
@@ -87,7 +88,7 @@ export class MiniMap {
         zoom: config.defaultZoom,
         interactive: true,
         attributionControl: true,
-        style: this.detectThemeStyle(),
+        style: this.tileStyle,
       });
 
       if (this.disposed) {
@@ -244,21 +245,14 @@ export class MiniMap {
   }
 
   /**
-   * Detect current theme style (light/dark) from CSS custom properties.
+   * Switch the minimap basemap style (light/dark).
+   * Delegates to the underlying provider's setStyle() method.
    */
-  private detectThemeStyle(): 'light' | 'dark' {
-    // Check if the page uses a dark theme via data attribute or media query
-    if (document.documentElement.dataset.theme === 'dark') {
-      return 'dark';
+  setTileStyle(style: 'light' | 'dark'): void {
+    this.tileStyle = style;
+    if (this.provider?.setStyle) {
+      this.provider.setStyle(style);
     }
-    try {
-      if (window.matchMedia?.('(prefers-color-scheme: dark)').matches) {
-        return 'dark';
-      }
-    } catch {
-      // matchMedia may not be available in test/SSR environments
-    }
-    return 'light';
   }
 
   /**

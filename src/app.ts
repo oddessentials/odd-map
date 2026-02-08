@@ -74,6 +74,8 @@ class App {
   private stateIndicator: HTMLElement | null;
   private modeSelector: HTMLElement | null;
   private spinBtn: HTMLElement | null;
+  private tileStyleBtn: HTMLElement | null;
+  private tileStyle: 'light' | 'dark' = 'light';
 
   // Bound event handlers for cleanup
   private boundHashChange: (() => void) | null = null;
@@ -92,6 +94,7 @@ class App {
     this.stateIndicator = document.getElementById('state-indicator');
     this.modeSelector = document.querySelector('.mode-selector');
     this.spinBtn = document.getElementById('spin-toggle');
+    this.tileStyleBtn = document.getElementById('tile-style-toggle');
 
     this.init();
   }
@@ -185,6 +188,12 @@ class App {
       this.spinBtn.addEventListener('click', () => this.handleSpinToggle());
     }
     this.updateSpinButtonVisibility();
+
+    // Tile style toggle (Tile mode only)
+    if (this.tileStyleBtn) {
+      this.tileStyleBtn.addEventListener('click', () => this.handleTileStyleToggle());
+    }
+    this.updateTileStyleButtonVisibility();
 
     if (this.panelContainer) {
       this.panel = new DetailsPanel(this.panelContainer, {
@@ -311,7 +320,14 @@ class App {
       await this.initMap(); // CRITICAL: Must await full initialization
       this.updateModeSelector();
       this.updateSpinButtonVisibility();
+      this.updateTileStyleButtonVisibility();
       this.updateSpinButton(); // Reset visual state (autoRotate defaults to false)
+      this.updateTileStyleButton(); // Sync toggle button visual state
+
+      // Restore tile style preference when switching back to tile mode
+      if (mode === 'tile' && this.tileStyle !== 'light' && this.map && 'setTileStyle' in this.map) {
+        (this.map as TileMap).setTileStyle(this.tileStyle);
+      }
 
       // Restore selection state AFTER map is fully initialized
       // This ensures marker visibility logic is properly triggered
@@ -384,6 +400,47 @@ class App {
 
     // Show spin button only in 3D mode
     this.spinBtn.hidden = this.mapMode !== '3d';
+  }
+
+  private handleTileStyleToggle(): void {
+    if (this.mapMode !== 'tile' || !this.map) return;
+
+    // Toggle between light and dark
+    this.tileStyle = this.tileStyle === 'light' ? 'dark' : 'light';
+
+    // Update the main tile map
+    if ('setTileStyle' in this.map) {
+      (this.map as TileMap).setTileStyle(this.tileStyle);
+    }
+
+    // Sync the minimap in the details panel
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (this.panel && typeof (this.panel as any).setMiniMapStyle === 'function') {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (this.panel as any).setMiniMapStyle(this.tileStyle);
+    }
+
+    this.updateTileStyleButton();
+  }
+
+  private updateTileStyleButton(): void {
+    if (!this.tileStyleBtn) return;
+
+    const isDark = this.tileStyle === 'dark';
+    this.tileStyleBtn.classList.toggle('active', isDark);
+    this.tileStyleBtn.setAttribute('aria-pressed', String(isDark));
+    this.tileStyleBtn.title = isDark ? 'Switch to light map' : 'Switch to dark map';
+    this.tileStyleBtn.setAttribute(
+      'aria-label',
+      isDark ? 'Switch to light map' : 'Switch to dark map'
+    );
+  }
+
+  private updateTileStyleButtonVisibility(): void {
+    if (!this.tileStyleBtn) return;
+
+    // Show tile style toggle only in tile mode
+    this.tileStyleBtn.hidden = this.mapMode !== 'tile';
   }
 
   /**

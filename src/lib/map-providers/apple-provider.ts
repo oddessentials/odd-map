@@ -254,6 +254,12 @@ export class AppleProvider implements TileMapProvider {
     this.map.addEventListener('select', this.selectHandler);
   }
 
+  setStyle(style: 'light' | 'dark'): void {
+    if (!this.map || !this.mk || this.disposed) return;
+    this.map.colorScheme =
+      style === 'dark' ? this.mk.Map.ColorScheme.Dark : this.mk.Map.ColorScheme.Light;
+  }
+
   getMapElement(): HTMLElement {
     if (!this.mapContainer) {
       throw new Error('Map not initialized. Call initialize() first.');
