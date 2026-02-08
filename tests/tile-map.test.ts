@@ -298,11 +298,13 @@ describe('TileMap', () => {
     await tileMap.init();
 
     // Add setStyle mock to the provider
-    (mockProvider as Record<string, unknown>).setStyle = vi.fn();
+    (mockProvider as unknown as Record<string, unknown>).setStyle = vi.fn();
 
     tileMap.setTileStyle('dark');
 
-    expect((mockProvider as Record<string, unknown>).setStyle).toHaveBeenCalledWith('dark');
+    expect((mockProvider as unknown as Record<string, unknown>).setStyle).toHaveBeenCalledWith(
+      'dark'
+    );
 
     tileMap.dispose();
   });

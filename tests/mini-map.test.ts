@@ -283,11 +283,13 @@ describe('MiniMap', () => {
     await miniMap.show(office, '#ff0000');
 
     // Add setStyle mock to the provider
-    (mockProvider as Record<string, unknown>).setStyle = vi.fn();
+    (mockProvider as unknown as Record<string, unknown>).setStyle = vi.fn();
 
     miniMap.setTileStyle('dark');
 
-    expect((mockProvider as Record<string, unknown>).setStyle).toHaveBeenCalledWith('dark');
+    expect((mockProvider as unknown as Record<string, unknown>).setStyle).toHaveBeenCalledWith(
+      'dark'
+    );
 
     miniMap.dispose();
   });
