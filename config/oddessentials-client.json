@@ -143,6 +143,7 @@
     },
     "mapProvider": {
       "provider": "apple",
+      "appleMapToken": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IkE1Nko1OUEyM1kifQ.eyJpc3MiOiJIM0ZZNjJXNThXIiwiaWF0IjoxNzcwNTc5MzIyLCJleHAiOjE3ODYxMzEzMjJ9.2QPtlHJALX1Y-0Al6kEAdUf1YECX4nYIZyCPwDEA7mKhDdzomN1UyON_mZRXTq90mKDNVFDw_7ouVWaJ3zYIXA",
       "defaultZoom": 15
     }
   }
