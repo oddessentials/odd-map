@@ -482,6 +482,15 @@ class App {
     btn?.setAttribute('aria-label', `${action} ${panelName}`);
     btn?.setAttribute('title', `${action} ${panelName}`);
     btn?.setAttribute('aria-expanded', String(!isCollapsed));
+
+    // Notify map renderers of container size change after CSS transition completes.
+    // MapLibre auto-resizes via ResizeObserver; SVG auto-scales via viewBox;
+    // 3D renderer listens for window resize events.
+    this.layoutEl?.addEventListener(
+      'transitionend',
+      () => window.dispatchEvent(new Event('resize')),
+      { once: true }
+    );
   }
 
   /**
