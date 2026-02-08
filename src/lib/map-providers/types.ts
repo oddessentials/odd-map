@@ -2,7 +2,7 @@
  * Map Provider Type Definitions
  *
  * Interfaces for the map provider abstraction layer.
- * Both MapLibre and Apple providers implement these contracts.
+ * MapLibre, Apple and Google providers implement these contracts.
  */
 
 import type { MarkerVisualState } from '../marker-state.js';
@@ -98,8 +98,9 @@ export interface TileMapProvider extends MapProvider {
  * Configuration for the map provider, from client config JSON.
  */
 export interface MapProviderConfig {
-  provider: 'maplibre' | 'apple';
+  provider: 'maplibre' | 'apple' | 'google';
   tileStyleUrl?: string;
   appleMapToken?: string;
+  googleMapsApiKey?: string;
   defaultZoom: number;
 }

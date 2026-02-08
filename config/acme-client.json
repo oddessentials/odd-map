@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "clientId": "acme",
+  "name": "ACME Corp",
+  "copyrightHolder": "ACME Corporation",
+  "tagline": "Quality products since 1949.",
+  "offices": [
+    {
+      "officeCode": "ACME TX1",
+      "state": "Texas",
+      "city": "Dallas",
+      "officeType": "Branch Office",
+      "address": "100 Commerce St, Suite 500, Dallas, TX 75201",
+      "region": "South Region",
+      "coordinates": {
+        "lat": 32.7767,
+        "lon": -96.797,
+        "source": "verified",
+        "confidence": "high",
+        "approximate": false
+      }
+    },
+    {
+      "officeCode": "ACME CA1",
+      "state": "California",
+      "city": "Los Angeles",
+      "officeType": "Branch Office",
+      "address": "456 Sunset Blvd, Los Angeles, CA 90028",
+      "region": "West Region",
+      "coordinates": {
+        "lat": 34.0522,
+        "lon": -118.2437,
+        "source": "verified",
+        "confidence": "high",
+        "approximate": false
+      }
+    },
+    {
+      "officeCode": "ACME NY1",
+      "state": "New York",
+      "city": "New York",
+      "officeType": "Branch Office",
+      "address": "789 Broadway, New York, NY 10003",
+      "region": "Northeast Region",
+      "coordinates": {
+        "lat": 40.7128,
+        "lon": -74.006,
+        "source": "verified",
+        "confidence": "high",
+        "approximate": false
+      }
+    }
+  ],
+  "theme": {
+    "primaryColor": "#8b0000",
+    "accentColor": "#d4380d",
+    "mapProvider": {
+      "provider": "google",
+      "defaultZoom": 14
+    }
+  }
+}

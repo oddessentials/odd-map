@@ -102,9 +102,10 @@ export interface BrandTheme {
   regionColors?: Record<string, string>;
   cameraViews?: Record<string, CameraView>;
   mapProvider?: {
-    provider: 'maplibre' | 'apple';
+    provider: 'maplibre' | 'apple' | 'google';
     tileStyleUrl?: string;
     appleMapToken?: string;
+    googleMapsApiKey?: string;
     defaultZoom: number;
   };
 }

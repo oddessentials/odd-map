@@ -15,8 +15,8 @@ import type {
   MarkerVisualState,
 } from './types.js';
 
-// Pinned Apple MapKit JS CDN URL (exact version per Constitution Principle VI)
-const MAPKIT_CDN_URL = 'https://cdn.apple-mapkit.com/mk/5.78.1/mapkit.core.js';
+// Apple MapKit JS CDN URL — uses full bundle (mapkit.js), not the core-only stub
+const MAPKIT_CDN_URL = 'https://cdn.apple-mapkit.com/mk/5.x.x/mapkit.js';
 
 // Cached in-flight promise to prevent duplicate script injection on concurrent calls
 let mapkitLoadPromise: Promise<void> | null = null;
@@ -38,7 +38,6 @@ function loadMapKitJS(): Promise<void> {
   mapkitLoadPromise = new Promise((resolve, reject) => {
     const script = document.createElement('script');
     script.src = MAPKIT_CDN_URL;
-    script.crossOrigin = 'anonymous';
     script.onload = () => resolve();
     script.onerror = () => {
       mapkitLoadPromise = null; // allow retry on failure
@@ -104,8 +103,11 @@ export class AppleProvider implements TileMapProvider {
     this.mapContainer.style.height = '100%';
     container.appendChild(this.mapContainer);
 
+    // ColorScheme enum may not be available in all MapKit JS CDN versions
     const colorScheme =
-      options.style === 'dark' ? this.mk.Map.ColorScheme.Dark : this.mk.Map.ColorScheme.Light;
+      options.style === 'dark'
+        ? (this.mk.Map.ColorScheme?.Dark ?? 'dark')
+        : (this.mk.Map.ColorScheme?.Light ?? 'light');
 
     this.map = new this.mk.Map(this.mapContainer, {
       center: new this.mk.Coordinate(0, 0),
@@ -257,7 +259,9 @@ export class AppleProvider implements TileMapProvider {
   setStyle(style: 'light' | 'dark'): void {
     if (!this.map || !this.mk || this.disposed) return;
     this.map.colorScheme =
-      style === 'dark' ? this.mk.Map.ColorScheme.Dark : this.mk.Map.ColorScheme.Light;
+      style === 'dark'
+        ? (this.mk.Map.ColorScheme?.Dark ?? 'dark')
+        : (this.mk.Map.ColorScheme?.Light ?? 'light');
   }
 
   getMapElement(): HTMLElement {

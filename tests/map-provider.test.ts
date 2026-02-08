@@ -2,12 +2,14 @@
  * Unit Tests - Map Provider Abstraction
  *
  * Tests for provider factory, interface compliance, and fallback behavior.
+ * Covers all three providers: MapLibre (default), Apple MapKit, Google Maps.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createMapProvider } from '../src/lib/map-providers/provider-factory';
 import { MapLibreProvider } from '../src/lib/map-providers/maplibre-provider';
 import { AppleProvider } from '../src/lib/map-providers/apple-provider';
+import { GoogleProvider } from '../src/lib/map-providers/google-provider';
 import type { MapProvider, MapProviderConfig } from '../src/lib/map-providers/types';
 
 describe('Map Provider Factory', () => {
@@ -39,6 +41,16 @@ describe('Map Provider Factory', () => {
     expect(provider).toBeInstanceOf(AppleProvider);
   });
 
+  it('returns Google provider when config specifies "google" with valid API key', () => {
+    const config: MapProviderConfig = {
+      provider: 'google',
+      googleMapsApiKey: 'AIzaSyTest1234567890',
+      defaultZoom: 14,
+    };
+    const provider = createMapProvider(config);
+    expect(provider).toBeInstanceOf(GoogleProvider);
+  });
+
   it('falls back to MapLibre when "apple" specified but no token provided', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
@@ -58,6 +70,33 @@ describe('Map Provider Factory', () => {
     const config: MapProviderConfig = {
       provider: 'apple',
       appleMapToken: '',
+      defaultZoom: 15,
+    };
+    const provider = createMapProvider(config);
+
+    expect(provider).toBeInstanceOf(MapLibreProvider);
+    expect(warnSpy).toHaveBeenCalled();
+  });
+
+  it('falls back to MapLibre when "google" specified but no API key provided', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const config: MapProviderConfig = {
+      provider: 'google',
+      defaultZoom: 15,
+    };
+    const provider = createMapProvider(config);
+
+    expect(provider).toBeInstanceOf(MapLibreProvider);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Falling back to MapLibre'));
+  });
+
+  it('falls back to MapLibre when "google" specified with empty API key', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const config: MapProviderConfig = {
+      provider: 'google',
+      googleMapsApiKey: '',
       defaultZoom: 15,
     };
     const provider = createMapProvider(config);
@@ -93,6 +132,39 @@ describe('Provider switching via config', () => {
     expect(p2).toBeInstanceOf(AppleProvider);
   });
 
+  it('switching provider field from maplibre to google changes provider type', () => {
+    const maplibreConfig: MapProviderConfig = { provider: 'maplibre', defaultZoom: 15 };
+    const googleConfig: MapProviderConfig = {
+      provider: 'google',
+      googleMapsApiKey: 'AIzaSyTest1234567890',
+      defaultZoom: 15,
+    };
+
+    const p1 = createMapProvider(maplibreConfig);
+    const p2 = createMapProvider(googleConfig);
+
+    expect(p1).toBeInstanceOf(MapLibreProvider);
+    expect(p2).toBeInstanceOf(GoogleProvider);
+  });
+
+  it('all three providers return distinct instances', () => {
+    const p1 = createMapProvider({ provider: 'maplibre', defaultZoom: 15 });
+    const p2 = createMapProvider({
+      provider: 'apple',
+      appleMapToken: 'token',
+      defaultZoom: 15,
+    });
+    const p3 = createMapProvider({
+      provider: 'google',
+      googleMapsApiKey: 'key',
+      defaultZoom: 15,
+    });
+
+    expect(p1).toBeInstanceOf(MapLibreProvider);
+    expect(p2).toBeInstanceOf(AppleProvider);
+    expect(p3).toBeInstanceOf(GoogleProvider);
+  });
+
   it('custom tileStyleUrl is passed through to MapLibre provider', () => {
     const config: MapProviderConfig = {
       provider: 'maplibre',
@@ -109,6 +181,20 @@ describe('Provider switching via config', () => {
 
     const config: MapProviderConfig = {
       provider: 'apple',
+      tileStyleUrl: 'https://custom-tiles.example.com/style.json',
+      defaultZoom: 15,
+    };
+    const provider = createMapProvider(config);
+
+    expect(provider).toBeInstanceOf(MapLibreProvider);
+    expect(warnSpy).toHaveBeenCalled();
+  });
+
+  it('google fallback preserves tileStyleUrl for MapLibre fallback', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const config: MapProviderConfig = {
+      provider: 'google',
       tileStyleUrl: 'https://custom-tiles.example.com/style.json',
       defaultZoom: 15,
     };
@@ -144,6 +230,13 @@ describe('MapProvider interface compliance', () => {
     }
   });
 
+  it('Google provider implements all MapProvider interface methods', () => {
+    const provider = new GoogleProvider('test-key');
+    for (const method of requiredMethods) {
+      expect(typeof provider[method]).toBe('function');
+    }
+  });
+
   it('MapLibre dispose is idempotent (safe to call multiple times)', () => {
     const provider = new MapLibreProvider();
     expect(() => {
@@ -160,6 +253,14 @@ describe('MapProvider interface compliance', () => {
     }).not.toThrow();
   });
 
+  it('Google dispose is idempotent (safe to call multiple times)', () => {
+    const provider = new GoogleProvider('test-key');
+    expect(() => {
+      provider.dispose();
+      provider.dispose();
+    }).not.toThrow();
+  });
+
   it('MapLibre getMapElement throws before initialize', () => {
     const provider = new MapLibreProvider();
     expect(() => provider.getMapElement()).toThrow('Map not initialized');
@@ -167,6 +268,11 @@ describe('MapProvider interface compliance', () => {
 
   it('Apple getMapElement throws before initialize', () => {
     const provider = new AppleProvider('test-token');
+    expect(() => provider.getMapElement()).toThrow('Map not initialized');
+  });
+
+  it('Google getMapElement throws before initialize', () => {
+    const provider = new GoogleProvider('test-key');
     expect(() => provider.getMapElement()).toThrow('Map not initialized');
   });
 
@@ -180,6 +286,11 @@ describe('MapProvider interface compliance', () => {
     expect(typeof provider.setStyle).toBe('function');
   });
 
+  it('Google provider implements optional setStyle method', () => {
+    const provider = new GoogleProvider('test-key');
+    expect(typeof provider.setStyle).toBe('function');
+  });
+
   it('MapLibre setStyle is safe to call before initialize', () => {
     const provider = new MapLibreProvider();
     expect(() => provider.setStyle('dark')).not.toThrow();
@@ -187,6 +298,11 @@ describe('MapProvider interface compliance', () => {
 
   it('Apple setStyle is safe to call before initialize', () => {
     const provider = new AppleProvider('test-token');
+    expect(() => provider.setStyle('dark')).not.toThrow();
+  });
+
+  it('Google setStyle is safe to call before initialize', () => {
+    const provider = new GoogleProvider('test-key');
     expect(() => provider.setStyle('dark')).not.toThrow();
   });
 
@@ -198,6 +314,12 @@ describe('MapProvider interface compliance', () => {
 
   it('Apple setStyle is safe to call after dispose', () => {
     const provider = new AppleProvider('test-token');
+    provider.dispose();
+    expect(() => provider.setStyle('dark')).not.toThrow();
+  });
+
+  it('Google setStyle is safe to call after dispose', () => {
+    const provider = new GoogleProvider('test-key');
     provider.dispose();
     expect(() => provider.setStyle('dark')).not.toThrow();
   });
