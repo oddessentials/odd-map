@@ -325,7 +325,12 @@ class App {
       this.updateTileStyleButton(); // Sync toggle button visual state
 
       // Restore tile style preference when switching back to tile mode
-      if (mode === 'tile' && this.tileStyle !== 'light' && this.map && 'setTileStyle' in this.map) {
+      if (
+        mode === 'tile' &&
+        this.tileStyle !== 'light' &&
+        this.map &&
+        typeof (this.map as TileMap).setTileStyle === 'function'
+      ) {
         (this.map as TileMap).setTileStyle(this.tileStyle);
       }
 
@@ -409,7 +414,7 @@ class App {
     this.tileStyle = this.tileStyle === 'light' ? 'dark' : 'light';
 
     // Update the main tile map
-    if ('setTileStyle' in this.map) {
+    if (typeof (this.map as TileMap).setTileStyle === 'function') {
       (this.map as TileMap).setTileStyle(this.tileStyle);
     }
 

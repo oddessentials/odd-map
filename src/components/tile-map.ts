@@ -47,7 +47,7 @@ export class TileMap {
       zoom: 4, // Start zoomed out to show all of US
       interactive: true,
       attributionControl: true,
-      style: 'light', // Always use light basemap for optimal marker/cluster visibility
+      style: 'light', // Default to light basemap; can be toggled via setTileStyle()
     });
 
     if (this.disposed) {

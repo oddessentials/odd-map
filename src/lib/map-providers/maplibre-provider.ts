@@ -400,26 +400,35 @@ export class MapLibreProvider implements TileMapProvider {
 
     this.map.setStyle(styleUrl);
 
-    // Track error handler so style.load can cancel it (and vice versa)
     const previousStyle = style === 'dark' ? 'light' : 'dark';
+
+    // Replay pending markers after a style finishes loading
+    const replayMarkers = () => {
+      if (this.disposed || !this.map || gen !== this.styleGeneration) return;
+      if (this.pendingMarkers.length > 0) {
+        this.setMarkers(this.pendingMarkers);
+      }
+    };
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const onError = (e: any) => {
+      // Cancel style.load handler to prevent duplicate marker replay
+      this.map?.off('style.load', onStyleLoad);
       if (this.disposed || !this.map || gen !== this.styleGeneration) return;
+      // Only revert if the style hasn't actually loaded (avoid false positives from tile errors)
+      if (this.map.isStyleLoaded()) return;
       console.warn('[MapLibre] Style load failed, reverting to', previousStyle, e.error?.message);
       this.currentStyle = previousStyle;
       const fallbackUrl = this.customStyleUrl ?? STYLE_URLS[previousStyle];
       this.map.setStyle(fallbackUrl);
+      // Wire style.load for fallback so markers are re-added
+      this.map.once('style.load', replayMarkers);
     };
 
     const onStyleLoad = () => {
       // Cancel error handler — style loaded successfully
       this.map?.off('error', onError);
-      if (this.disposed || !this.map || gen !== this.styleGeneration) return;
-      // Re-add markers if any were previously set
-      if (this.pendingMarkers.length > 0) {
-        this.setMarkers(this.pendingMarkers);
-      }
+      replayMarkers();
     };
 
     this.map.once('style.load', onStyleLoad);
