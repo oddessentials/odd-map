@@ -107,6 +107,7 @@ export interface BrandTheme {
     appleMapToken?: string;
     googleMapsApiKey?: string;
     defaultZoom: number;
+    defaultTileStyle?: 'light' | 'dark';
   };
 }
 

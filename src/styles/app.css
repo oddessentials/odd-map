@@ -481,7 +481,7 @@ body {
 
 .contact-name {
   font-weight: var(--font-semibold);
-  color: var(--color-primary);
+  color: var(--color-primary-on-light);
 }
 
 .contact-title {
@@ -497,7 +497,9 @@ body {
 
 .contact-phone a,
 .contact-email a {
-  color: var(--color-accent);
+  color: var(--color-accent-on-light);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 /* Office List */
@@ -1431,7 +1433,7 @@ body {
 
   /* Region list dark styles */
   .region-nav-title {
-    color: #7ba3d4;
+    color: var(--color-primary-on-dark);
   }
 
   .region-btn {
@@ -1475,7 +1477,7 @@ body {
   }
 
   .panel-title {
-    color: #7ba3d4;
+    color: var(--color-primary-on-dark);
   }
 
   .panel-placeholder {
@@ -1487,7 +1489,7 @@ body {
   }
 
   .contact-name {
-    color: #7ba3d4;
+    color: var(--color-primary-on-dark);
   }
 
   .contact-title {
@@ -1537,10 +1539,6 @@ body {
     color: #b0b0b0;
   }
 
-  .office-contact {
-    background: #252540;
-  }
-
   /* Secondary buttons in dark context */
   .sidebar-left .btn-secondary,
   .sidebar-right .btn-secondary {
@@ -1562,7 +1560,7 @@ body {
   }
 
   .footer-label {
-    color: #7ba3d4;
+    color: var(--color-primary-on-dark);
   }
 
   .footer-copyright {
@@ -1572,7 +1570,7 @@ body {
   .footer-links a,
   .footer-phone,
   .footer-email {
-    color: #b0c4de;
+    color: var(--color-accent-on-dark);
   }
 
   .footer-links a:hover {
@@ -1593,7 +1591,7 @@ body {
   }
 
   .specialty-panel-title {
-    color: #7ba3d4;
+    color: var(--color-primary-on-dark);
   }
 
   .specialty-panel-desc {
@@ -1622,7 +1620,7 @@ body {
   }
 
   .personnel-name {
-    color: #7ba3d4;
+    color: var(--color-primary-on-dark);
   }
 
   .personnel-title {
@@ -1631,7 +1629,7 @@ body {
 
   /* Specialty section links and buttons */
   .specialty-section .contact-link {
-    color: #b0c4de;
+    color: var(--color-accent-on-dark);
   }
 
   .specialty-section .btn-secondary {
@@ -1788,7 +1786,7 @@ body {
 
 .office-contact .contact-name {
   font-weight: var(--font-semibold, 600);
-  color: var(--color-primary, #00396c);
+  color: var(--color-primary-on-light);
 }
 
 .office-contact .contact-title {
@@ -1813,11 +1811,9 @@ body {
 }
 
 .office-contact a {
-  color: var(--color-accent, #ff6b35);
-}
-
-.office-contact a:hover {
+  color: var(--color-accent-on-light);
   text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .office-modal-footer {
@@ -1850,6 +1846,25 @@ body {
 .directions-btn:focus-visible {
   outline: 2px solid var(--color-accent, #ff6b35);
   outline-offset: 2px;
+}
+
+/* Dark mode for office modal contact card (must follow base rules to win cascade) */
+@media (prefers-color-scheme: dark) {
+  .office-contact {
+    background: #252540;
+  }
+
+  .office-contact .contact-name {
+    color: var(--color-primary-on-dark);
+  }
+
+  .office-contact .contact-title {
+    color: #b0b0b0;
+  }
+
+  .office-contact a {
+    color: var(--color-accent-on-dark);
+  }
 }
 
 /* ============================================

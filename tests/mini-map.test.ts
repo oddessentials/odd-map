@@ -16,6 +16,7 @@ vi.mock('../src/lib/client-config', () => ({
   getMapProviderConfig: vi.fn(() => ({
     provider: 'maplibre',
     defaultZoom: 15,
+    defaultTileStyle: 'light',
   })),
   getActiveConfig: vi.fn(() => ({
     name: 'Test Client',
@@ -259,6 +260,33 @@ describe('MiniMap', () => {
 
     miniMap.expand();
     expect(mockProvider.getMapElement).not.toHaveBeenCalled();
+  });
+
+  it('initializes with config defaultTileStyle when set to dark', async () => {
+    const { getMapProviderConfig } = await import('../src/lib/client-config');
+    vi.mocked(getMapProviderConfig).mockReturnValue({
+      provider: 'maplibre',
+      defaultZoom: 15,
+      defaultTileStyle: 'dark',
+    });
+
+    const miniMap = new MiniMap(container);
+    const office = createTestOffice('TST1', 40.7, -74.0);
+    await miniMap.show(office, '#ff0000');
+
+    expect(mockProvider.initialize).toHaveBeenCalledWith(
+      expect.any(HTMLElement),
+      expect.objectContaining({ style: 'dark' })
+    );
+
+    miniMap.dispose();
+
+    // Reset
+    vi.mocked(getMapProviderConfig).mockReturnValue({
+      provider: 'maplibre',
+      defaultZoom: 15,
+      defaultTileStyle: 'light',
+    });
   });
 
   it('setTileStyle defaults to light', async () => {

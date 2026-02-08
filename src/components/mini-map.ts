@@ -21,7 +21,7 @@ export class MiniMap {
   private currentOfficeCode: string | null = null;
   private lastOffice: Office | null = null;
   private lastBrandColor: string = '#00396c';
-  private tileStyle: 'light' | 'dark' = 'light';
+  private tileStyle: 'light' | 'dark';
   private initializing = false;
   private disposed = false;
   private resizeObserver: ResizeObserver | null = null;
@@ -29,6 +29,7 @@ export class MiniMap {
 
   constructor(container: HTMLElement) {
     this.container = container;
+    this.tileStyle = getMapProviderConfig().defaultTileStyle;
 
     // Create internal structure
     this.mapWrapper = document.createElement('div');

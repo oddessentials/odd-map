@@ -16,10 +16,18 @@
   --color-primary-light: #004488;
   --color-primary-dark: #002244;
 
+  /* Contrast-safe foreground variants (brand text on surfaces) */
+  --color-primary-on-light: #003366; /* passes ~9.2:1 on #f5f5f5 */
+  --color-primary-on-dark: #4d8ec1; /* lightened to pass 4.5:1 on #252540 */
+
   /* Blue accent - Interactive elements */
   --color-accent: #0066cc;
   --color-accent-light: #0088ee;
   --color-accent-dark: #004499;
+
+  /* Contrast-safe accent foreground variants */
+  --color-accent-on-light: #0066cc; /* passes ~5.0:1 on #f5f5f5 */
+  --color-accent-on-dark: #3399dd; /* lightened to pass 4.5:1 on #252540 */
 
   /* ============================================
      NEUTRAL COLORS

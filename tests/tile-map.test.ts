@@ -27,6 +27,7 @@ vi.mock('../src/lib/client-config', () => ({
   getMapProviderConfig: vi.fn(() => ({
     provider: 'maplibre',
     defaultZoom: 15,
+    defaultTileStyle: 'light',
   })),
   getClientOffices: vi.fn(() => [
     {
@@ -338,6 +339,63 @@ describe('TileMap', () => {
     tileMap.dispose();
   });
 
+  it('passes defaultTileStyle from config to provider initialize()', async () => {
+    // Reconfigure mock to return dark style
+    const { getMapProviderConfig } = await import('../src/lib/client-config');
+    vi.mocked(getMapProviderConfig).mockReturnValue({
+      provider: 'maplibre',
+      defaultZoom: 15,
+      defaultTileStyle: 'dark',
+    });
+
+    const tileMap = new TileMap(container, {});
+    await tileMap.init();
+
+    expect(mockProvider.initialize).toHaveBeenCalledWith(
+      expect.any(HTMLElement),
+      expect.objectContaining({
+        style: 'dark',
+      })
+    );
+
+    tileMap.dispose();
+
+    // Reset to default
+    vi.mocked(getMapProviderConfig).mockReturnValue({
+      provider: 'maplibre',
+      defaultZoom: 15,
+      defaultTileStyle: 'light',
+    });
+  });
+
+  it('defaults to light style when defaultTileStyle is not in config', async () => {
+    const { getMapProviderConfig } = await import('../src/lib/client-config');
+    // Simulate legacy config missing defaultTileStyle — tile-map.ts uses ?? 'light' fallback
+    vi.mocked(getMapProviderConfig).mockReturnValue({
+      provider: 'maplibre',
+      defaultZoom: 15,
+    } as ReturnType<typeof getMapProviderConfig>);
+
+    const tileMap = new TileMap(container, {});
+    await tileMap.init();
+
+    expect(mockProvider.initialize).toHaveBeenCalledWith(
+      expect.any(HTMLElement),
+      expect.objectContaining({
+        style: 'light',
+      })
+    );
+
+    tileMap.dispose();
+
+    // Reset
+    vi.mocked(getMapProviderConfig).mockReturnValue({
+      provider: 'maplibre',
+      defaultZoom: 15,
+      defaultTileStyle: 'light',
+    });
+  });
+
   it('handles dispose during init gracefully', async () => {
     const slowProvider = createMockProvider();
     (slowProvider.initialize as ReturnType<typeof vi.fn>).mockImplementation(
@@ -380,6 +438,7 @@ describe('TileMap provider fallback', () => {
       provider: 'apple',
       appleMapToken: 'test-token',
       defaultZoom: 15,
+      defaultTileStyle: 'light',
     });
 
     // Create a failing provider
@@ -420,6 +479,7 @@ describe('TileMap provider fallback', () => {
       provider: 'google',
       googleMapsApiKey: 'test-key',
       defaultZoom: 14,
+      defaultTileStyle: 'light',
     });
 
     const failingProvider = createMockProvider();
@@ -449,6 +509,7 @@ describe('TileMap provider fallback', () => {
     vi.mocked(getMapProviderConfig).mockReturnValue({
       provider: 'maplibre',
       defaultZoom: 15,
+      defaultTileStyle: 'light',
     });
 
     const failingProvider = createMockProvider();
@@ -471,6 +532,7 @@ describe('TileMap provider fallback', () => {
       provider: 'apple',
       appleMapToken: 'test-token',
       defaultZoom: 15,
+      defaultTileStyle: 'light',
     });
 
     const failingProvider = createMockProvider();
