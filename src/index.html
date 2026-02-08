@@ -54,7 +54,7 @@
         </nav>
 
         <!-- Reset button -->
-        <button id="reset-btn" class="btn btn-secondary reset-btn" hidden>
+        <button id="reset-btn" class="btn btn-secondary reset-btn" aria-label="Reset View" hidden>
           <svg
             width="16"
             height="16"
@@ -152,6 +152,8 @@
             id="collapse-left"
             class="sidebar-collapse-btn sidebar-collapse-left"
             aria-label="Collapse region panel"
+            aria-expanded="true"
+            aria-controls="region-list"
             title="Collapse region panel"
           >
             <svg
@@ -171,6 +173,8 @@
             id="collapse-right"
             class="sidebar-collapse-btn sidebar-collapse-right"
             aria-label="Collapse details panel"
+            aria-expanded="true"
+            aria-controls="details-panel"
             title="Collapse details panel"
           >
             <svg

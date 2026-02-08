@@ -57,6 +57,12 @@ describe('Sidebar Collapse CSS', () => {
     expect(mobileSection).toMatch(/\.sidebar-collapse-btn\s*\{[^}]*display:\s*none/);
   });
 
+  it('resets collapsed sidebar state on mobile breakpoint', () => {
+    const mobileSection = cssContent.slice(cssContent.indexOf('@media (max-width: 768px)'));
+    expect(mobileSection).toContain('.sidebar.collapsed');
+    expect(mobileSection).toMatch(/\.sidebar\.collapsed\s*\{[^}]*overflow:\s*visible/);
+  });
+
   it('chevron flips when expanded class is applied', () => {
     expect(cssContent).toMatch(
       /\.sidebar-collapse-btn\.expanded\s+svg\s*\{[^}]*transform:\s*rotate\(180deg\)/
@@ -89,6 +95,7 @@ function toggleSidebar(
   const action = isCollapsed ? 'Expand' : 'Collapse';
   els.btn.setAttribute('aria-label', `${action} ${panelName}`);
   els.btn.setAttribute('title', `${action} ${panelName}`);
+  els.btn.setAttribute('aria-expanded', String(!isCollapsed));
 
   return isCollapsed;
 }
@@ -194,6 +201,16 @@ describe('Sidebar Collapse Toggle Logic', () => {
     toggleSidebar('left', { layout, sidebar: sidebarLeft, btn: btnLeft });
     expect(btnLeft.getAttribute('title')).toBe('Collapse region panel');
   });
+
+  it('toggles aria-expanded between true and false', () => {
+    btnLeft.setAttribute('aria-expanded', 'true');
+
+    toggleSidebar('left', { layout, sidebar: sidebarLeft, btn: btnLeft });
+    expect(btnLeft.getAttribute('aria-expanded')).toBe('false');
+
+    toggleSidebar('left', { layout, sidebar: sidebarLeft, btn: btnLeft });
+    expect(btnLeft.getAttribute('aria-expanded')).toBe('true');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -219,5 +236,11 @@ describe('Sidebar Collapse HTML Structure', () => {
   it('collapse buttons have accessible aria-labels', () => {
     expect(htmlContent).toContain('aria-label="Collapse region panel"');
     expect(htmlContent).toContain('aria-label="Collapse details panel"');
+  });
+
+  it('collapse buttons have aria-expanded and aria-controls', () => {
+    expect(htmlContent).toContain('aria-expanded="true"');
+    expect(htmlContent).toContain('aria-controls="region-list"');
+    expect(htmlContent).toContain('aria-controls="details-panel"');
   });
 });

@@ -11,7 +11,7 @@
       [data-region="Southern California"] .state { fill: var(--color-region-southern-california, #7d3c98); }
       [data-region="West Region"] .state { fill: var(--color-region-west-region, #2874a6); }
       [data-region="Midwest Region"] .state { fill: var(--color-region-midwest-region, #a04000); }
-      [data-region]:hover .state { filter: brightness(1.3); }
+      [data-region]:hover .state { filter: brightness(1.25) saturate(1.3); }
       .inactive .state { fill: #e8e8e8; cursor: default; }
       .inactive .state:hover { fill: #ddd; }
       .marker { fill: #fff; stroke: var(--color-primary, #003366); stroke-width: 2; cursor: pointer; }

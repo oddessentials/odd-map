@@ -75,4 +75,10 @@ describe('Mobile Header HTML', () => {
     expect(htmlContent).toContain('data-mode="2d"');
     expect(htmlContent).toContain('data-mode="3d"');
   });
+
+  it('reset button has aria-label for mobile icon-only accessibility', () => {
+    const resetBtnMatch = htmlContent.match(/id="reset-btn"[^>]*/);
+    expect(resetBtnMatch).toBeTruthy();
+    expect(resetBtnMatch![0]).toContain('aria-label="Reset View"');
+  });
 });

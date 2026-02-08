@@ -476,11 +476,12 @@ class App {
     // Flip the chevron direction
     btn?.classList.toggle('expanded', isCollapsed);
 
-    // Update aria-label and title
+    // Update ARIA disclosure state and labels
     const panelName = side === 'left' ? 'region panel' : 'details panel';
     const action = isCollapsed ? 'Expand' : 'Collapse';
     btn?.setAttribute('aria-label', `${action} ${panelName}`);
     btn?.setAttribute('title', `${action} ${panelName}`);
+    btn?.setAttribute('aria-expanded', String(!isCollapsed));
   }
 
   /**

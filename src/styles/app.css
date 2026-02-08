@@ -1035,6 +1035,17 @@ body {
     display: none;
   }
 
+  /* Reset collapsed sidebar state on mobile (sidebars have different UX) */
+  .sidebar.collapsed {
+    overflow: visible;
+    padding: var(--space-2) var(--space-3);
+    border-width: 1px;
+  }
+
+  .sidebar-right.collapsed {
+    padding: var(--space-4);
+  }
+
   .layout {
     display: flex;
     flex-direction: column;
