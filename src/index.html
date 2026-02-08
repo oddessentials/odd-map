@@ -54,7 +54,7 @@
         </nav>
 
         <!-- Reset button -->
-        <button id="reset-btn" class="btn btn-secondary reset-btn" hidden>
+        <button id="reset-btn" class="btn btn-secondary reset-btn" aria-label="Reset View" hidden>
           <svg
             width="16"
             height="16"
@@ -66,7 +66,7 @@
             <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
             <path d="M3 3v5h5"></path>
           </svg>
-          Reset View
+          <span class="reset-btn-text">Reset View</span>
         </button>
 
         <!-- Map mode selector -->
@@ -147,6 +147,49 @@
 
         <!-- Center: Map -->
         <section class="map-section">
+          <!-- Sidebar collapse/expand toggles (desktop only) -->
+          <button
+            id="collapse-left"
+            class="sidebar-collapse-btn sidebar-collapse-left"
+            aria-label="Collapse region panel"
+            aria-expanded="true"
+            aria-controls="region-list"
+            title="Collapse region panel"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+          </button>
+          <button
+            id="collapse-right"
+            class="sidebar-collapse-btn sidebar-collapse-right"
+            aria-label="Collapse details panel"
+            aria-expanded="true"
+            aria-controls="details-panel"
+            title="Collapse details panel"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+          </button>
           <div
             id="map-container"
             class="map-container"

@@ -128,8 +128,8 @@
     }
   },
   "theme": {
-    "primaryColor": "#8e44ad",
-    "accentColor": "#e67e22",
+    "primaryColor": "#1a1a1a",
+    "accentColor": "#1a9c54",
     "regionColors": {
       "Northeast Region": "#2980b9",
       "South Region": "#27ae60"

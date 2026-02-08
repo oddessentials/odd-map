@@ -76,10 +76,15 @@ class App {
   private spinBtn: HTMLElement | null;
   private tileStyleBtn: HTMLElement | null;
   private tileStyle: 'light' | 'dark' = 'light';
+  private collapseLeftBtn: HTMLElement | null;
+  private collapseRightBtn: HTMLElement | null;
+  private layoutEl: HTMLElement | null;
 
   // Bound event handlers for cleanup
   private boundHashChange: (() => void) | null = null;
   private boundKeydown: ((e: KeyboardEvent) => void) | null = null;
+  private boundCollapseLeft: (() => void) | null = null;
+  private boundCollapseRight: (() => void) | null = null;
 
   constructor() {
     // Rendering mode: default to Tile
@@ -95,6 +100,9 @@ class App {
     this.modeSelector = document.querySelector('.mode-selector');
     this.spinBtn = document.getElementById('spin-toggle');
     this.tileStyleBtn = document.getElementById('tile-style-toggle');
+    this.collapseLeftBtn = document.getElementById('collapse-left');
+    this.collapseRightBtn = document.getElementById('collapse-right');
+    this.layoutEl = document.querySelector('.layout');
 
     this.init();
   }
@@ -194,6 +202,16 @@ class App {
       this.tileStyleBtn.addEventListener('click', () => this.handleTileStyleToggle());
     }
     this.updateTileStyleButtonVisibility();
+
+    // Sidebar collapse toggles (desktop only)
+    if (this.collapseLeftBtn) {
+      this.boundCollapseLeft = () => this.toggleSidebar('left');
+      this.collapseLeftBtn.addEventListener('click', this.boundCollapseLeft);
+    }
+    if (this.collapseRightBtn) {
+      this.boundCollapseRight = () => this.toggleSidebar('right');
+      this.collapseRightBtn.addEventListener('click', this.boundCollapseRight);
+    }
 
     if (this.panelContainer) {
       this.panel = new DetailsPanel(this.panelContainer, {
@@ -448,6 +466,53 @@ class App {
     this.tileStyleBtn.hidden = this.mapMode !== 'tile';
   }
 
+  private toggleSidebar(side: 'left' | 'right'): void {
+    if (!this.layoutEl) return;
+
+    const className = side === 'left' ? 'left-collapsed' : 'right-collapsed';
+    const sidebar = side === 'left' ? this.regionListContainer : this.panelContainer;
+    const btn = side === 'left' ? this.collapseLeftBtn : this.collapseRightBtn;
+    const isCollapsed = this.layoutEl.classList.toggle(className);
+
+    // Toggle sidebar collapsed state for overflow hiding
+    sidebar?.classList.toggle('collapsed', isCollapsed);
+
+    // Flip the chevron direction
+    btn?.classList.toggle('expanded', isCollapsed);
+
+    // Update ARIA disclosure state and labels
+    const panelName = side === 'left' ? 'region panel' : 'details panel';
+    const action = isCollapsed ? 'Expand' : 'Collapse';
+    btn?.setAttribute('aria-label', `${action} ${panelName}`);
+    btn?.setAttribute('title', `${action} ${panelName}`);
+    btn?.setAttribute('aria-expanded', String(!isCollapsed));
+
+    // Notify map renderers of container size change after CSS transition completes.
+    // MapLibre auto-resizes via ResizeObserver; SVG auto-scales via viewBox;
+    // 3D renderer listens for window resize events.
+    // Uses event filtering (target + propertyName) to avoid spurious fires from
+    // child element transitions, with a timeout fallback for cases where the
+    // transition doesn't fire (prefers-reduced-motion, canceled, etc.).
+    const dispatchResize = () => window.dispatchEvent(new Event('resize'));
+    let handled = false;
+    const onTransitionEnd = (e: TransitionEvent) => {
+      if (e.target !== this.layoutEl || e.propertyName !== 'grid-template-columns') return;
+      handled = true;
+      this.layoutEl?.removeEventListener('transitionend', onTransitionEnd);
+      dispatchResize();
+    };
+    this.layoutEl.addEventListener('transitionend', onTransitionEnd);
+
+    // Fallback: if transitionend doesn't fire within 350ms (transition-normal is 250ms),
+    // dispatch resize anyway and clean up the listener.
+    setTimeout(() => {
+      if (!handled) {
+        this.layoutEl?.removeEventListener('transitionend', onTransitionEnd);
+        dispatchResize();
+      }
+    }, 350);
+  }
+
   /**
    * Compute and dispatch centralized marker states to the active renderer.
    */
@@ -632,6 +697,14 @@ class App {
     if (this.boundKeydown) {
       document.removeEventListener('keydown', this.boundKeydown);
       this.boundKeydown = null;
+    }
+    if (this.boundCollapseLeft && this.collapseLeftBtn) {
+      this.collapseLeftBtn.removeEventListener('click', this.boundCollapseLeft);
+      this.boundCollapseLeft = null;
+    }
+    if (this.boundCollapseRight && this.collapseRightBtn) {
+      this.collapseRightBtn.removeEventListener('click', this.boundCollapseRight);
+      this.boundCollapseRight = null;
     }
   }
 }
