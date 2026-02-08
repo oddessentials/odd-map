@@ -76,6 +76,9 @@ class App {
   private spinBtn: HTMLElement | null;
   private tileStyleBtn: HTMLElement | null;
   private tileStyle: 'light' | 'dark' = 'light';
+  private collapseLeftBtn: HTMLElement | null;
+  private collapseRightBtn: HTMLElement | null;
+  private layoutEl: HTMLElement | null;
 
   // Bound event handlers for cleanup
   private boundHashChange: (() => void) | null = null;
@@ -95,6 +98,9 @@ class App {
     this.modeSelector = document.querySelector('.mode-selector');
     this.spinBtn = document.getElementById('spin-toggle');
     this.tileStyleBtn = document.getElementById('tile-style-toggle');
+    this.collapseLeftBtn = document.getElementById('collapse-left');
+    this.collapseRightBtn = document.getElementById('collapse-right');
+    this.layoutEl = document.querySelector('.layout');
 
     this.init();
   }
@@ -194,6 +200,14 @@ class App {
       this.tileStyleBtn.addEventListener('click', () => this.handleTileStyleToggle());
     }
     this.updateTileStyleButtonVisibility();
+
+    // Sidebar collapse toggles (desktop only)
+    if (this.collapseLeftBtn) {
+      this.collapseLeftBtn.addEventListener('click', () => this.toggleSidebar('left'));
+    }
+    if (this.collapseRightBtn) {
+      this.collapseRightBtn.addEventListener('click', () => this.toggleSidebar('right'));
+    }
 
     if (this.panelContainer) {
       this.panel = new DetailsPanel(this.panelContainer, {
@@ -446,6 +460,27 @@ class App {
 
     // Show tile style toggle only in tile mode
     this.tileStyleBtn.hidden = this.mapMode !== 'tile';
+  }
+
+  private toggleSidebar(side: 'left' | 'right'): void {
+    if (!this.layoutEl) return;
+
+    const className = side === 'left' ? 'left-collapsed' : 'right-collapsed';
+    const sidebar = side === 'left' ? this.regionListContainer : this.panelContainer;
+    const btn = side === 'left' ? this.collapseLeftBtn : this.collapseRightBtn;
+    const isCollapsed = this.layoutEl.classList.toggle(className);
+
+    // Toggle sidebar collapsed state for overflow hiding
+    sidebar?.classList.toggle('collapsed', isCollapsed);
+
+    // Flip the chevron direction
+    btn?.classList.toggle('expanded', isCollapsed);
+
+    // Update aria-label and title
+    const panelName = side === 'left' ? 'region panel' : 'details panel';
+    const action = isCollapsed ? 'Expand' : 'Collapse';
+    btn?.setAttribute('aria-label', `${action} ${panelName}`);
+    btn?.setAttribute('title', `${action} ${panelName}`);
   }
 
   /**
