@@ -73,9 +73,10 @@ const CameraViewSchema = z.object({
 
 const MapProviderConfigSchema = z
   .object({
-    provider: z.enum(['maplibre', 'apple']).default('maplibre'),
+    provider: z.enum(['maplibre', 'apple', 'google']).default('maplibre'),
     tileStyleUrl: z.string().url().optional(),
     appleMapToken: z.string().optional(),
+    googleMapsApiKey: z.string().optional(),
     defaultZoom: z.number().min(1).max(20).default(15),
   })
   .optional();

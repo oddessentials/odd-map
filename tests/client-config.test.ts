@@ -720,13 +720,27 @@ describe('MapProviderConfig schema validation (T009)', () => {
     const config = createValidConfig({
       theme: {
         mapProvider: {
-          provider: 'google',
+          provider: 'bing',
           defaultZoom: 15,
         },
       },
     });
     const result = ClientConfigSchema.safeParse(config);
     expect(result.success).toBe(false);
+  });
+
+  it('accepts config with mapProvider using "google" provider', () => {
+    const config = createValidConfig({
+      theme: {
+        mapProvider: {
+          provider: 'google',
+          googleMapsApiKey: 'AIzaSyTest1234567890',
+          defaultZoom: 14,
+        },
+      },
+    });
+    const result = ClientConfigSchema.safeParse(config);
+    expect(result.success).toBe(true);
   });
 
   it('validates tileStyleUrl must be a valid URL', () => {

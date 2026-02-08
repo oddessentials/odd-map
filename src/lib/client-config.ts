@@ -146,9 +146,10 @@ export function getOfficesByRegion(regionName: string): Office[] {
  * Returns defaults (MapLibre, zoom 15) when mapProvider is not configured.
  */
 export function getMapProviderConfig(): {
-  provider: 'maplibre' | 'apple';
+  provider: 'maplibre' | 'apple' | 'google';
   tileStyleUrl?: string;
   appleMapToken?: string;
+  googleMapsApiKey?: string;
   defaultZoom: number;
 } {
   const config = getActiveConfig();
@@ -157,6 +158,7 @@ export function getMapProviderConfig(): {
     provider: mp?.provider ?? 'maplibre',
     tileStyleUrl: mp?.tileStyleUrl,
     appleMapToken: mp?.appleMapToken,
+    googleMapsApiKey: mp?.googleMapsApiKey,
     defaultZoom: mp?.defaultZoom ?? 15,
   };
 }

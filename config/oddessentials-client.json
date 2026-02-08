@@ -142,7 +142,7 @@
       }
     },
     "mapProvider": {
-      "provider": "maplibre",
+      "provider": "apple",
       "defaultZoom": 15
     }
   }
