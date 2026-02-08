@@ -9,43 +9,46 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
+/** Extract the first mobile media query block, guarded against missing content. */
+function getMobileSection(css: string): string {
+  const idx = css.indexOf('@media (max-width: 768px)');
+  expect(idx).not.toBe(-1); // Guard: media query must exist
+  return css.slice(idx);
+}
+
 describe('Mobile Header CSS', () => {
   let cssContent: string;
+  let mobileSection: string;
 
   beforeEach(() => {
     cssContent = readFileSync(resolve(__dirname, '../src/styles/app.css'), 'utf-8');
+    mobileSection = getMobileSection(cssContent);
   });
 
   it('reduces header-inner gap on mobile', () => {
-    const mobileSection = cssContent.slice(cssContent.indexOf('@media (max-width: 768px)'));
     expect(mobileSection).toMatch(/\.header-inner\s*\{[^}]*gap:\s*var\(--space-2\)/);
   });
 
   it('reduces header-inner padding on mobile', () => {
-    const mobileSection = cssContent.slice(cssContent.indexOf('@media (max-width: 768px)'));
     expect(mobileSection).toMatch(/\.header-inner\s*\{[^}]*padding:\s*0\s+var\(--space-2\)/);
   });
 
   it('shrinks logo text on mobile', () => {
-    const mobileSection = cssContent.slice(cssContent.indexOf('@media (max-width: 768px)'));
     expect(mobileSection).toMatch(/\.logo-text\s*\{[^}]*font-size:\s*var\(--text-lg\)/);
   });
 
   it('hides reset button text on mobile (icon-only)', () => {
-    const mobileSection = cssContent.slice(cssContent.indexOf('@media (max-width: 768px)'));
     expect(mobileSection).toContain('.reset-btn-text');
     expect(mobileSection).toMatch(/\.reset-btn-text\s*\{[^}]*display:\s*none/);
   });
 
   it('compacts mode-btn padding on mobile', () => {
-    const mobileSection = cssContent.slice(cssContent.indexOf('@media (max-width: 768px)'));
     expect(mobileSection).toMatch(
       /\.mode-btn\s*\{[^}]*padding:\s*var\(--space-1\)\s+var\(--space-2\)/
     );
   });
 
   it('reduces mode-btn font-size on mobile', () => {
-    const mobileSection = cssContent.slice(cssContent.indexOf('@media (max-width: 768px)'));
     expect(mobileSection).toMatch(/\.mode-btn\s*\{[^}]*font-size:\s*var\(--text-xs\)/);
   });
 });

@@ -83,6 +83,8 @@ class App {
   // Bound event handlers for cleanup
   private boundHashChange: (() => void) | null = null;
   private boundKeydown: ((e: KeyboardEvent) => void) | null = null;
+  private boundCollapseLeft: (() => void) | null = null;
+  private boundCollapseRight: (() => void) | null = null;
 
   constructor() {
     // Rendering mode: default to Tile
@@ -203,10 +205,12 @@ class App {
 
     // Sidebar collapse toggles (desktop only)
     if (this.collapseLeftBtn) {
-      this.collapseLeftBtn.addEventListener('click', () => this.toggleSidebar('left'));
+      this.boundCollapseLeft = () => this.toggleSidebar('left');
+      this.collapseLeftBtn.addEventListener('click', this.boundCollapseLeft);
     }
     if (this.collapseRightBtn) {
-      this.collapseRightBtn.addEventListener('click', () => this.toggleSidebar('right'));
+      this.boundCollapseRight = () => this.toggleSidebar('right');
+      this.collapseRightBtn.addEventListener('click', this.boundCollapseRight);
     }
 
     if (this.panelContainer) {
@@ -486,11 +490,27 @@ class App {
     // Notify map renderers of container size change after CSS transition completes.
     // MapLibre auto-resizes via ResizeObserver; SVG auto-scales via viewBox;
     // 3D renderer listens for window resize events.
-    this.layoutEl?.addEventListener(
-      'transitionend',
-      () => window.dispatchEvent(new Event('resize')),
-      { once: true }
-    );
+    // Uses event filtering (target + propertyName) to avoid spurious fires from
+    // child element transitions, with a timeout fallback for cases where the
+    // transition doesn't fire (prefers-reduced-motion, canceled, etc.).
+    const dispatchResize = () => window.dispatchEvent(new Event('resize'));
+    let handled = false;
+    const onTransitionEnd = (e: TransitionEvent) => {
+      if (e.target !== this.layoutEl || e.propertyName !== 'grid-template-columns') return;
+      handled = true;
+      this.layoutEl?.removeEventListener('transitionend', onTransitionEnd);
+      dispatchResize();
+    };
+    this.layoutEl.addEventListener('transitionend', onTransitionEnd);
+
+    // Fallback: if transitionend doesn't fire within 350ms (transition-normal is 250ms),
+    // dispatch resize anyway and clean up the listener.
+    setTimeout(() => {
+      if (!handled) {
+        this.layoutEl?.removeEventListener('transitionend', onTransitionEnd);
+        dispatchResize();
+      }
+    }, 350);
   }
 
   /**
@@ -677,6 +697,14 @@ class App {
     if (this.boundKeydown) {
       document.removeEventListener('keydown', this.boundKeydown);
       this.boundKeydown = null;
+    }
+    if (this.boundCollapseLeft && this.collapseLeftBtn) {
+      this.collapseLeftBtn.removeEventListener('click', this.boundCollapseLeft);
+      this.boundCollapseLeft = null;
+    }
+    if (this.boundCollapseRight && this.collapseRightBtn) {
+      this.collapseRightBtn.removeEventListener('click', this.boundCollapseRight);
+      this.boundCollapseRight = null;
     }
   }
 }

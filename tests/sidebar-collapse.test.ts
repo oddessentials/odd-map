@@ -11,6 +11,13 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
+/** Extract the first mobile media query block, guarded against missing content. */
+function getMobileSection(css: string): string {
+  const idx = css.indexOf('@media (max-width: 768px)');
+  expect(idx).not.toBe(-1); // Guard: media query must exist
+  return css.slice(idx);
+}
+
 // ---------------------------------------------------------------------------
 // CSS structural tests
 // ---------------------------------------------------------------------------
@@ -52,13 +59,13 @@ describe('Sidebar Collapse CSS', () => {
   });
 
   it('collapse buttons are hidden on mobile', () => {
-    const mobileSection = cssContent.slice(cssContent.indexOf('@media (max-width: 768px)'));
+    const mobileSection = getMobileSection(cssContent);
     expect(mobileSection).toContain('.sidebar-collapse-btn');
     expect(mobileSection).toMatch(/\.sidebar-collapse-btn\s*\{[^}]*display:\s*none/);
   });
 
   it('resets collapsed sidebar state on mobile breakpoint', () => {
-    const mobileSection = cssContent.slice(cssContent.indexOf('@media (max-width: 768px)'));
+    const mobileSection = getMobileSection(cssContent);
     expect(mobileSection).toContain('.sidebar.collapsed');
     expect(mobileSection).toMatch(/\.sidebar\.collapsed\s*\{[^}]*overflow:\s*visible/);
   });
