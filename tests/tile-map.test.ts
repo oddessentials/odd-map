@@ -7,10 +7,21 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-// Mock the provider factory and client config BEFORE importing TileMap
+// Mock the provider factory, MapLibre fallback, and client config BEFORE importing TileMap
 vi.mock('../src/lib/map-providers/provider-factory', () => ({
   createTileMapProvider: vi.fn(),
 }));
+
+// MapLibre mock — instance is set per-test in the fallback suite
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const maplibreMockState: { instance: any } = { instance: null };
+vi.mock('../src/lib/map-providers/maplibre-provider', () => {
+  return {
+    MapLibreProvider: vi.fn().mockImplementation(function () {
+      return maplibreMockState.instance;
+    }),
+  };
+});
 
 vi.mock('../src/lib/client-config', () => ({
   getMapProviderConfig: vi.fn(() => ({
@@ -100,6 +111,7 @@ vi.mock('../src/lib/client-config', () => ({
 
 import { TileMap } from '../src/components/tile-map';
 import { createTileMapProvider } from '../src/lib/map-providers/provider-factory';
+import { MapLibreProvider } from '../src/lib/map-providers/maplibre-provider';
 import type { TileMapProvider } from '../src/lib/map-providers/types';
 
 function createMockProvider(): TileMapProvider {
@@ -340,5 +352,143 @@ describe('TileMap', () => {
 
     // Provider should be cleaned up even though init was in progress
     expect(slowProvider.dispose).toHaveBeenCalled();
+  });
+});
+
+describe('TileMap provider fallback', () => {
+  let container: HTMLElement;
+
+  beforeEach(() => {
+    container = document.createElement('div');
+    document.body.appendChild(container);
+    vi.mocked(createTileMapProvider).mockClear();
+    vi.mocked(MapLibreProvider).mockClear();
+    maplibreMockState.instance = null;
+  });
+
+  afterEach(() => {
+    document.body.removeChild(container);
+    vi.restoreAllMocks();
+  });
+
+  it('falls back to MapLibre when Apple provider initialize() fails', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    // Configure as Apple provider
+    const { getMapProviderConfig } = await import('../src/lib/client-config');
+    vi.mocked(getMapProviderConfig).mockReturnValue({
+      provider: 'apple',
+      appleMapToken: 'test-token',
+      defaultZoom: 15,
+    });
+
+    // Create a failing provider
+    const failingProvider = createMockProvider();
+    (failingProvider.initialize as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new Error('MapKit CDN load failed')
+    );
+    vi.mocked(createTileMapProvider).mockReturnValue(failingProvider);
+
+    // Set up MapLibre mock to succeed
+    const mockMapLibreInstance = createMockProvider();
+    maplibreMockState.instance = mockMapLibreInstance;
+
+    const tileMap = new TileMap(container, {});
+    await tileMap.init();
+
+    // Should have warned about the fallback
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('apple provider failed'),
+      expect.any(Error)
+    );
+
+    // Should have disposed the failing provider
+    expect(failingProvider.dispose).toHaveBeenCalled();
+
+    // Should have initialized MapLibre as fallback
+    expect(MapLibreProvider).toHaveBeenCalled();
+    expect(mockMapLibreInstance.initialize).toHaveBeenCalled();
+
+    tileMap.dispose();
+  });
+
+  it('falls back to MapLibre when Google provider initialize() fails', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const { getMapProviderConfig } = await import('../src/lib/client-config');
+    vi.mocked(getMapProviderConfig).mockReturnValue({
+      provider: 'google',
+      googleMapsApiKey: 'test-key',
+      defaultZoom: 14,
+    });
+
+    const failingProvider = createMockProvider();
+    (failingProvider.initialize as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new Error('Google Maps CDN load failed')
+    );
+    vi.mocked(createTileMapProvider).mockReturnValue(failingProvider);
+
+    const mockMapLibreInstance = createMockProvider();
+    maplibreMockState.instance = mockMapLibreInstance;
+
+    const tileMap = new TileMap(container, {});
+    await tileMap.init();
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('google provider failed'),
+      expect.any(Error)
+    );
+    expect(failingProvider.dispose).toHaveBeenCalled();
+    expect(mockMapLibreInstance.initialize).toHaveBeenCalled();
+
+    tileMap.dispose();
+  });
+
+  it('throws when MapLibre itself fails (no further fallback)', async () => {
+    const { getMapProviderConfig } = await import('../src/lib/client-config');
+    vi.mocked(getMapProviderConfig).mockReturnValue({
+      provider: 'maplibre',
+      defaultZoom: 15,
+    });
+
+    const failingProvider = createMockProvider();
+    (failingProvider.initialize as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new Error('MapLibre failed')
+    );
+    vi.mocked(createTileMapProvider).mockReturnValue(failingProvider);
+
+    const tileMap = new TileMap(container, {});
+    await expect(tileMap.init()).rejects.toThrow('MapLibre failed');
+
+    tileMap.dispose();
+  });
+
+  it('fallback provider still loads markers and fits bounds', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const { getMapProviderConfig } = await import('../src/lib/client-config');
+    vi.mocked(getMapProviderConfig).mockReturnValue({
+      provider: 'apple',
+      appleMapToken: 'test-token',
+      defaultZoom: 15,
+    });
+
+    const failingProvider = createMockProvider();
+    (failingProvider.initialize as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new Error('CDN failed')
+    );
+    vi.mocked(createTileMapProvider).mockReturnValue(failingProvider);
+
+    const mockMapLibreInstance = createMockProvider();
+    maplibreMockState.instance = mockMapLibreInstance;
+
+    const tileMap = new TileMap(container, {});
+    await tileMap.init();
+
+    // After fallback, markers and bounds should still be loaded
+    expect(mockMapLibreInstance.setMarkers).toHaveBeenCalled();
+    expect(mockMapLibreInstance.fitBounds).toHaveBeenCalled();
+
+    tileMap.dispose();
   });
 });

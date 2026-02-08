@@ -1,8 +1,9 @@
 /**
  * Tile Map Component
  *
- * Full-screen interactive tile map mode using MapLibre or Apple Maps.
- * Implements MapComponent interface for seamless integration with the app state machine.
+ * Full-screen interactive tile map using MapLibre, Apple Maps, or Google Maps.
+ * If the configured provider fails to initialize (CDN error, auth failure),
+ * automatically falls back to MapLibre before the app-level 2D SVG fallback.
  * Displays all office markers with clustering at zoomed-out levels.
  */
 
@@ -14,6 +15,7 @@ import type {
   TileMapMarker,
 } from '../lib/map-providers/types.js';
 import { createTileMapProvider } from '../lib/map-providers/provider-factory.js';
+import { MapLibreProvider } from '../lib/map-providers/maplibre-provider.js';
 import {
   getMapProviderConfig,
   getClientOffices,
@@ -43,12 +45,30 @@ export class TileMap {
   async init(): Promise<void> {
     this.provider = createTileMapProvider(this.config);
 
-    await this.provider.initialize(this.mapContainer, {
+    const initOptions = {
       zoom: 4, // Start zoomed out to show all of US
       interactive: true,
       attributionControl: true,
-      style: 'light', // Default to light basemap; can be toggled via setTileStyle()
-    });
+      style: 'light' as const, // Default to light basemap; can be toggled via setTileStyle()
+    };
+
+    try {
+      await this.provider.initialize(this.mapContainer, initOptions);
+    } catch (err) {
+      // Provider failed (e.g., CDN load error, auth failure) — fall back to MapLibre
+      if (this.config.provider !== 'maplibre') {
+        console.warn(
+          `[tile-map] ${this.config.provider} provider failed to initialize. Falling back to MapLibre.`,
+          err
+        );
+        this.provider.dispose();
+        this.mapContainer.innerHTML = '';
+        this.provider = new MapLibreProvider(this.config.tileStyleUrl);
+        await this.provider.initialize(this.mapContainer, initOptions);
+      } else {
+        throw err; // MapLibre itself failed — nothing to fall back to
+      }
+    }
 
     if (this.disposed) {
       this.provider?.dispose();

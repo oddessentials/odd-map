@@ -15,8 +15,8 @@ import type {
   MarkerVisualState,
 } from './types.js';
 
-// Pinned Apple MapKit JS CDN URL (exact version per Constitution Principle VI)
-const MAPKIT_CDN_URL = 'https://cdn.apple-mapkit.com/mk/5.78.1/mapkit.core.js';
+// Apple MapKit JS CDN URL — uses full bundle (mapkit.js), not the core-only stub
+const MAPKIT_CDN_URL = 'https://cdn.apple-mapkit.com/mk/5.x.x/mapkit.js';
 
 // Cached in-flight promise to prevent duplicate script injection on concurrent calls
 let mapkitLoadPromise: Promise<void> | null = null;
@@ -38,7 +38,6 @@ function loadMapKitJS(): Promise<void> {
   mapkitLoadPromise = new Promise((resolve, reject) => {
     const script = document.createElement('script');
     script.src = MAPKIT_CDN_URL;
-    script.crossOrigin = 'anonymous';
     script.onload = () => resolve();
     script.onerror = () => {
       mapkitLoadPromise = null; // allow retry on failure

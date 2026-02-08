@@ -1,7 +1,7 @@
 # odd-map
 
 [![CI](https://github.com/oddessentials/odd-map/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/oddessentials/odd-map/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/tests-608_passing-brightgreen)](https://github.com/oddessentials/odd-map/actions)
+[![Tests](https://img.shields.io/badge/tests-612_passing-brightgreen)](https://github.com/oddessentials/odd-map/actions)
 [![Demo](https://img.shields.io/badge/demo-live-blue)](https://oddessentials.github.io/odd-map/)
 
 A white-label, mobile-friendly interactive office locator with three rendering modes, region-based navigation, and multi-client theming. Fully static — no backend required.
@@ -47,7 +47,7 @@ To add a new client, create two JSON files in `config/` and register the client 
 | `npm run dev`                           | Start Vite dev server                                               |
 | `npm run build`                         | Production build to `dist/`                                         |
 | `npm run verify`                        | Full CI check — lint, format, typecheck, client verification, tests |
-| `npm test`                              | Run 608 tests in watch mode (Vitest)                                |
+| `npm test`                              | Run 612 tests in watch mode (Vitest)                                |
 | `npm run test:ci`                       | Verify all clients + run tests once                                 |
 | `npm run typecheck`                     | TypeScript type checking                                            |
 | `npm run lint`                          | ESLint check                                                        |
@@ -92,7 +92,7 @@ odd-map/
 │   ├── styles/                     # CSS (design tokens, base, app)
 │   ├── types/                      # TypeScript type definitions
 │   └── index.html                  # HTML entry point
-├── tests/                    # 608 Vitest unit tests across 43 suites
+├── tests/                    # 612 Vitest unit tests across 43 suites
 └── docs/                     # GitHub Pages deployment (auto-generated)
 ```
 
@@ -221,7 +221,7 @@ npm run build:data   # Generate config JSON from scraped data
 | ------------ | --------------------------------------------------- |
 | Language     | TypeScript 5.7 (ES2022), JavaScript (3D module)     |
 | Bundler      | Vite 7.3.1                                          |
-| Testing      | Vitest 4.0.17, jsdom — 608 tests across 43 suites   |
+| Testing      | Vitest 4.0.17, jsdom — 612 tests across 43 suites   |
 | 3D Rendering | Three.js 0.182                                      |
 | Tile Maps    | MapLibre GL JS, Apple MapKit JS, Google Maps JS API |
 | Validation   | Zod 4.3                                             |
