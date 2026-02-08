@@ -169,4 +169,36 @@ describe('MapProvider interface compliance', () => {
     const provider = new AppleProvider('test-token');
     expect(() => provider.getMapElement()).toThrow('Map not initialized');
   });
+
+  it('MapLibre provider implements optional setStyle method', () => {
+    const provider = new MapLibreProvider();
+    expect(typeof provider.setStyle).toBe('function');
+  });
+
+  it('Apple provider implements optional setStyle method', () => {
+    const provider = new AppleProvider('test-token');
+    expect(typeof provider.setStyle).toBe('function');
+  });
+
+  it('MapLibre setStyle is safe to call before initialize', () => {
+    const provider = new MapLibreProvider();
+    expect(() => provider.setStyle('dark')).not.toThrow();
+  });
+
+  it('Apple setStyle is safe to call before initialize', () => {
+    const provider = new AppleProvider('test-token');
+    expect(() => provider.setStyle('dark')).not.toThrow();
+  });
+
+  it('MapLibre setStyle is safe to call after dispose', () => {
+    const provider = new MapLibreProvider();
+    provider.dispose();
+    expect(() => provider.setStyle('dark')).not.toThrow();
+  });
+
+  it('Apple setStyle is safe to call after dispose', () => {
+    const provider = new AppleProvider('test-token');
+    provider.dispose();
+    expect(() => provider.setStyle('dark')).not.toThrow();
+  });
 });

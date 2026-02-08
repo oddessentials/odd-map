@@ -47,7 +47,7 @@ export class TileMap {
       zoom: 4, // Start zoomed out to show all of US
       interactive: true,
       attributionControl: true,
-      style: this.detectThemeStyle(),
+      style: 'light', // Default to light basemap; can be toggled via setTileStyle()
     });
 
     if (this.disposed) {
@@ -142,6 +142,11 @@ export class TileMap {
     this.provider.updateMarkerStates(states);
   }
 
+  setTileStyle(style: 'light' | 'dark'): void {
+    if (!this.provider) return;
+    this.provider.setStyle?.(style);
+  }
+
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
@@ -153,19 +158,5 @@ export class TileMap {
 
     this.markers = [];
     this.mapContainer.remove();
-  }
-
-  private detectThemeStyle(): 'light' | 'dark' {
-    if (document.documentElement.dataset.theme === 'dark') {
-      return 'dark';
-    }
-    try {
-      if (window.matchMedia?.('(prefers-color-scheme: dark)').matches) {
-        return 'dark';
-      }
-    } catch {
-      // matchMedia may not be available in test environments
-    }
-    return 'light';
   }
 }

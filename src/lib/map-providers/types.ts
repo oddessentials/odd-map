@@ -71,6 +71,9 @@ export interface MapProvider {
 
   /** Get the underlying map element for DOM reparenting (expand/collapse) */
   getMapElement(): HTMLElement;
+
+  /** Switch the basemap style (light/dark) on an already-initialized map */
+  setStyle?(style: 'light' | 'dark'): void;
 }
 
 /**
@@ -85,7 +88,7 @@ export interface TileMapProvider extends MapProvider {
   updateMarkerStates(states: MarkerVisualState[]): void;
 
   /** Fit the map view to show a set of markers */
-  fitBounds(markers: TileMapMarker[], padding?: number): void;
+  fitBounds(markers: TileMapMarker[], padding?: number, maxZoom?: number): void;
 
   /** Register click handler for markers */
   onMarkerClick(handler: (officeCode: string) => void): void;

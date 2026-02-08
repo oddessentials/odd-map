@@ -360,6 +360,16 @@ export class DetailsPanel {
     this.closeBtn.classList.add('panel-close--hidden');
   }
 
+  /**
+   * Switch the minimap basemap style (light/dark).
+   * Called by app controller when the tile style toggle is flipped.
+   */
+  setMiniMapStyle(style) {
+    if (this.miniMap) {
+      this.miniMap.setTileStyle(style);
+    }
+  }
+
   close() {
     this.container.classList.remove('open');
   }

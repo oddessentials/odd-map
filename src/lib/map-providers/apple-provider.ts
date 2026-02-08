@@ -216,7 +216,7 @@ export class AppleProvider implements TileMapProvider {
     // iterate annotations and update color/opacity.
   }
 
-  fitBounds(markers: TileMapMarker[], _padding = 50): void {
+  fitBounds(markers: TileMapMarker[], _padding = 50, maxZoom = 10): void {
     if (!this.map || !this.mk || markers.length === 0) return;
 
     // Calculate bounding region from markers
@@ -228,10 +228,13 @@ export class AppleProvider implements TileMapProvider {
     const maxLon = Math.max(...lons);
 
     const center = new this.mk.Coordinate((minLat + maxLat) / 2, (minLon + maxLon) / 2);
-    const span = new this.mk.CoordinateSpan(
-      (maxLat - minLat) * 1.2, // Add 20% padding
-      (maxLon - minLon) * 1.2
-    );
+
+    // Enforce maxZoom by computing a minimum span from the zoom cap
+    const minSpan = this.zoomToSpan(maxZoom);
+    const latSpan = Math.max((maxLat - minLat) * 1.2, minSpan);
+    const lonSpan = Math.max((maxLon - minLon) * 1.2, minSpan);
+
+    const span = new this.mk.CoordinateSpan(latSpan, lonSpan);
     const region = new this.mk.CoordinateRegion(center, span);
     this.map.setRegionAnimated(region, true);
   }
@@ -249,6 +252,12 @@ export class AppleProvider implements TileMapProvider {
       if (code) handler(code);
     };
     this.map.addEventListener('select', this.selectHandler);
+  }
+
+  setStyle(style: 'light' | 'dark'): void {
+    if (!this.map || !this.mk || this.disposed) return;
+    this.map.colorScheme =
+      style === 'dark' ? this.mk.Map.ColorScheme.Dark : this.mk.Map.ColorScheme.Light;
   }
 
   getMapElement(): HTMLElement {
