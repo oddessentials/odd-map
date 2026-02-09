@@ -1,0 +1,15 @@
+{
+  "configVersion": 1,
+  "mapId": "usa-regions",
+  "clientId": "demo",
+  "mapAssetHash": "0a59d058bfe5150fb4b135bf00c1daa5c4196a8a98ec01afe77d286eb0d5f16a",
+  "viewBox": { "x": 0, "y": 0, "width": 960, "height": 600 },
+  "coordinates": [
+    { "officeCode": "DEMO FL1", "lat": 25.7617, "lon": -80.1918, "svgX": 715, "svgY": 495 },
+    { "officeCode": "DEMO WA1", "lat": 47.6062, "lon": -122.3321, "svgX": 110, "svgY": 95 }
+  ],
+  "regions": [
+    { "id": "southeast", "name": "Southeast Region", "svgPathId": "region-usg-southeast-region" },
+    { "id": "west", "name": "West Region", "svgPathId": "region-usg-west-region" }
+  ]
+}

@@ -1,5 +1,5 @@
 {
-  "configVersion": 1,
+  "configVersion": 2,
   "mapId": "usa-regions",
   "clientId": "usg",
   "mapAssetHash": "0a59d058bfe5150fb4b135bf00c1daa5c4196a8a98ec01afe77d286eb0d5f16a",
@@ -9,97 +9,76 @@
     "width": 960,
     "height": 600
   },
+  "projection": {
+    "type": "geoAlbersUsa",
+    "scale": 1276,
+    "translate": [479, 299]
+  },
   "coordinates": [
     {
       "officeCode": "USG PA1",
       "lat": 40.2628,
-      "lon": -80.1631,
-      "svgX": 754.84,
-      "svgY": 241.73
+      "lon": -80.1631
     },
     {
       "officeCode": "USG PA2",
       "lat": 39.9512,
-      "lon": -75.1645,
-      "svgX": 838.98,
-      "svgY": 232.42
+      "lon": -75.1645
     },
     {
       "officeCode": "USG MA1",
       "lat": 42.3554,
-      "lon": -71.064,
-      "svgX": 892.35,
-      "svgY": 163.75
+      "lon": -71.064
     },
     {
       "officeCode": "USG FL1",
       "lat": 28.0787,
-      "lon": -82.5169,
-      "svgX": 754.27,
-      "svgY": 518.08
+      "lon": -82.5169
     },
     {
       "officeCode": "USG GA1",
       "lat": 34.0754,
-      "lon": -84.2941,
-      "svgX": 703.08,
-      "svgY": 389.79
+      "lon": -84.2941
     },
     {
       "officeCode": "USG LA1",
       "lat": 30.4754,
-      "lon": -90.0829,
-      "svgX": 602.59,
-      "svgY": 480.03
+      "lon": -90.0829
     },
     {
       "officeCode": "USG TX1",
       "lat": 32.7357,
-      "lon": -97.1081,
-      "svgX": 468.69,
-      "svgY": 432.89
+      "lon": -97.1081
     },
     {
       "officeCode": "USG TX2",
       "lat": 29.8649,
-      "lon": -95.4962,
-      "svgX": 499.05,
-      "svgY": 497.15
+      "lon": -95.4962
     },
     {
       "officeCode": "USG CA1",
       "lat": 33.6407,
-      "lon": -117.7448,
-      "svgX": 92.51,
-      "svgY": 367.13
+      "lon": -117.7448
     },
     {
       "officeCode": "USG US1",
       "lat": 48.2766,
-      "lon": -116.5535,
-      "svgX": 184.2,
-      "svgY": 51.96
+      "lon": -116.5535
     },
     {
       "officeCode": "USG MN1",
       "lat": 45.0567,
-      "lon": -93.1414,
-      "svgX": 534.24,
-      "svgY": 155.84
+      "lon": -93.1414
     },
     {
       "officeCode": "USG MI1",
       "lat": 42.5803,
-      "lon": -83.1431,
-      "svgX": 698.21,
-      "svgY": 197.74
+      "lon": -83.1431
     },
     {
       "officeCode": "USG IL1",
       "lat": 41.8807,
-      "lon": -87.6298,
-      "svgX": 626.93,
-      "svgY": 221.51
+      "lon": -87.6298
     }
   ],
   "regions": [
@@ -133,10 +112,5 @@
       "name": "West Region",
       "svgPathId": "region-usg-west-region"
     }
-  ],
-  "projection": {
-    "type": "geoAlbersUsa",
-    "scale": 1276,
-    "translate": [479, 299]
-  }
+  ]
 }

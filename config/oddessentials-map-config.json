@@ -1,5 +1,5 @@
 {
-  "configVersion": 1,
+  "configVersion": 2,
   "mapId": "usa-regions",
   "clientId": "oddessentials",
   "mapAssetHash": "0a59d058bfe5150fb4b135bf00c1daa5c4196a8a98ec01afe77d286eb0d5f16a",
@@ -9,41 +9,56 @@
     "width": 960,
     "height": 600
   },
+  "projection": {
+    "type": "geoAlbersUsa",
+    "scale": 1276,
+    "translate": [479, 299]
+  },
   "coordinates": [
     {
       "officeCode": "OE NY1",
       "lat": 40.7128,
       "lon": -74.006,
-      "svgX": 862.15,
-      "svgY": 218.42
+      "svgOverride": {
+        "x": 862.15,
+        "y": 218.42
+      }
     },
     {
       "officeCode": "OE FL1",
       "lat": 25.7617,
       "lon": -80.1918,
-      "svgX": 790.33,
-      "svgY": 555.18
+      "svgOverride": {
+        "x": 790.33,
+        "y": 555.18
+      }
     },
     {
       "officeCode": "OE OR1",
       "lat": 45.5152,
       "lon": -122.6784,
-      "svgX": 102.47,
-      "svgY": 148.91
+      "svgOverride": {
+        "x": 102.47,
+        "y": 148.91
+      }
     },
     {
       "officeCode": "OE WA1",
       "lat": 47.6062,
       "lon": -122.3321,
-      "svgX": 108.22,
-      "svgY": 108.55
+      "svgOverride": {
+        "x": 108.22,
+        "y": 108.55
+      }
     },
     {
       "officeCode": "OE AZ1",
       "lat": 33.4484,
       "lon": -112.074,
-      "svgX": 200.84,
-      "svgY": 372.63
+      "svgOverride": {
+        "x": 200.84,
+        "y": 372.63
+      }
     }
   ],
   "regions": [
@@ -62,10 +77,5 @@
       "name": "West Region",
       "svgPathId": "region-usg-west-region"
     }
-  ],
-  "projection": {
-    "type": "geoAlbersUsa",
-    "scale": 1276,
-    "translate": [479, 299]
-  }
+  ]
 }

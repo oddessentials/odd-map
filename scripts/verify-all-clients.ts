@@ -39,11 +39,14 @@ configFiles.forEach(({ clientId, file }) => {
 console.log('\n' + '='.repeat(60) + '\n');
 
 let hasErrors = false;
+const clientResults = new Map<string, boolean>();
 
 // Verify each client
 for (const { clientId, file: _file } of configFiles) {
   console.log(`\n📦 Verifying client: ${clientId}`);
   console.log('-'.repeat(60));
+
+  let clientPassed = true;
 
   try {
     // 1. Verify SVG IDs
@@ -51,7 +54,7 @@ for (const { clientId, file: _file } of configFiles) {
     const svgResult = await runScript(`${scripts.svgIds} --client=${clientId}`);
     if (!svgResult.success) {
       console.error(`\n❌ ${clientId}: SVG ID verification failed`);
-      hasErrors = true;
+      clientPassed = false;
     }
 
     // 2. Verify map integrity (strict mode)
@@ -59,16 +62,19 @@ for (const { clientId, file: _file } of configFiles) {
     const mapResult = await runScript(`${scripts.mapStrict}${clientId}`);
     if (!mapResult.success) {
       console.error(`\n❌ ${clientId}: Map integrity verification failed`);
-      hasErrors = true;
+      clientPassed = false;
     }
 
-    if (svgResult.success && mapResult.success) {
+    if (clientPassed) {
       console.log(`\n✅ ${clientId}: All checks passed`);
     }
   } catch (err) {
     console.error(`\n❌ ${clientId}: Verification error:`, err.message);
-    hasErrors = true;
+    clientPassed = false;
   }
+
+  clientResults.set(clientId, clientPassed);
+  if (!clientPassed) hasErrors = true;
 
   console.log('\n' + '='.repeat(60));
 }
@@ -76,7 +82,8 @@ for (const { clientId, file: _file } of configFiles) {
 // Summary
 console.log('\n📊 Verification Summary:\n');
 configFiles.forEach(({ clientId }) => {
-  const symbol = hasErrors ? '❌' : '✅';
+  const passed = clientResults.get(clientId) ?? false;
+  const symbol = passed ? '✅' : '❌';
   console.log(`  ${symbol} ${clientId}`);
 });
 

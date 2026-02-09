@@ -21,10 +21,6 @@ let currentClientId: string | null = null;
 // Cache in-flight initialization promises per client to prevent race conditions
 const initializationPromises = new Map<string, Promise<void>>();
 
-// SVG Dimensions (from current client config)
-let SVG_WIDTH = 960;
-let SVG_HEIGHT = 600;
-
 /**
  * Initialize projection system for a specific client.
  * MUST be called before using getMarkerPosition().
@@ -39,9 +35,6 @@ export async function initProjection(clientId: string): Promise<void> {
   // Check if already initialized
   if (clientStates.has(normalizedClientId)) {
     currentClientId = normalizedClientId;
-    const state = clientStates.get(normalizedClientId)!;
-    SVG_WIDTH = state.config.viewBox.width;
-    SVG_HEIGHT = state.config.viewBox.height;
     console.log(`✅ Projection already initialized for client: ${normalizedClientId}`);
     return;
   }
@@ -88,9 +81,16 @@ export async function initProjection(clientId: string): Promise<void> {
       }
 
       // Build lookup map for O(1) access by normalized office code
-      const coordMap = new Map(
-        validatedConfig.coordinates.map((c) => [c.officeCode, { x: c.svgX, y: c.svgY }])
-      );
+      let coordMap: Map<string, { x: number; y: number }>;
+      if (validatedConfig.configVersion === 1) {
+        coordMap = new Map(
+          validatedConfig.coordinates.map((c) => [c.officeCode, { x: c.svgX, y: c.svgY }])
+        );
+      } else {
+        // V2 config: project lat/lon → SVG via d3-geo (lazy-loaded inside svg-projection)
+        const { projectAllToSvg } = await import('./svg-projection.js');
+        coordMap = await projectAllToSvg(validatedConfig.coordinates, validatedConfig.projection);
+      }
 
       // Store client-specific state
       clientStates.set(normalizedClientId, {
@@ -99,8 +99,6 @@ export async function initProjection(clientId: string): Promise<void> {
       });
 
       currentClientId = normalizedClientId;
-      SVG_WIDTH = validatedConfig.viewBox.width;
-      SVG_HEIGHT = validatedConfig.viewBox.height;
 
       console.log(
         `✅ Projection initialized for client: ${normalizedClientId} (${coordMap.size} offices)`
@@ -134,9 +132,6 @@ export function switchClient(clientId: string): void {
   }
 
   currentClientId = normalizedClientId;
-  const state = clientStates.get(normalizedClientId)!;
-  SVG_WIDTH = state.config.viewBox.width;
-  SVG_HEIGHT = state.config.viewBox.height;
 
   console.log(`✅ Switched to client: ${normalizedClientId}`);
 }
@@ -179,40 +174,6 @@ export function getMarkerPosition(officeCode: string): { x: number; y: number } 
 
   return position;
 }
-
-/**
- * @deprecated Use getMarkerPosition(officeCode) instead.
- * Lat/lon lookups are not supported with direct coordinate storage.
- */
-export function latLonToSvg(_lat: number, _lon: number): { x: number; y: number } {
-  throw new Error(`latLonToSvg() is not supported. Use getMarkerPosition(officeCode) instead.`);
-}
-
-/**
- * Convert office code to 3D scene coordinates.
- * Uses office code lookup for accurate placement.
- */
-export function latLonTo3D(officeCode: string): { x: number; y: number; z: number } {
-  const svgCoords = getMarkerPosition(officeCode);
-
-  // Transform SVG coordinates to 3D scene space
-  // Center the map in 3D scene
-  const x = (svgCoords.x - SVG_WIDTH / 2) * 3 - 450;
-  const y = -(svgCoords.y - SVG_HEIGHT / 2) * 3;
-  const z = 20; // Marker elevation above map surface
-
-  return { x, y, z };
-}
-
-// Export constants for tests
-export const MAP_DIMENSIONS = {
-  get SVG_WIDTH() {
-    return SVG_WIDTH;
-  },
-  get SVG_HEIGHT() {
-    return SVG_HEIGHT;
-  },
-};
 
 /**
  * FOR TESTING: Clear all client states

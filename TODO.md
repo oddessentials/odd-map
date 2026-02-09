@@ -1,8 +1,19 @@
 # odd-map — Backlog
 
-**Last reviewed:** 2026-02-07
+**Last reviewed:** 2026-02-09
 
-Items below are forward-looking enhancements. All blocking and critical work has been completed.
+---
+
+## Resolved: SVG Coordinate Coupling (Feature 014)
+
+Runtime lat/lon projection shipped in `014-runtime-lat-lon-projection`. All configs migrated to `configVersion: 2`. External tools (odd-logistics) can now generate complete map configs with just lat/lon coordinates.
+
+### Remaining Cleanup
+
+- **Retire legacy scripts:** `scripts/recapture-coordinates.ts`, `scripts/analyze-svg-projection.ts`, and `scripts/project-coordinates.ts` are no longer needed for v2 configs. Keep for reference or archive.
+- **Remove `mapAssetHash`:** Still present in v2 schema for SVG integrity checking. Could be removed once region boundaries move to GeoJSON.
+- **Replace `svgPathId` with GeoJSON regions:** Regions still reference SVG `<path>` element IDs. A future iteration could use GeoJSON polygons for region boundaries, fully decoupling from the SVG.
+- **Remove `coordinate-validation.ts`:** Standalone utility that validates svgX/svgY fields. No longer imported by any source file.
 
 ---
 
@@ -12,11 +23,15 @@ Items below are forward-looking enhancements. All blocking and critical work has
 
 Create a dedicated `docs/CLIENT_ONBOARDING.md` covering the full end-to-end workflow for adding a new client: SVG region prep, config file structure, coordinate capture, theme customisation, verification checklist, and deployment steps. The README covers the basics — this would be the comprehensive reference for implementation teams.
 
+**Note:** This guide will need a major revision once the SVG coordinate coupling (above) is resolved. Consider deferring until runtime projection is in place.
+
 **Files:** `docs/CLIENT_ONBOARDING.md` (new)
 
 ### 2. Schema Migration Strategy
 
 The config loader already validates `schemaVersion` and rejects unsupported versions (`client-config.ts`). Document the formal migration path: version bump process, migration function pattern, backwards-compatibility policy, and rollback procedure. Create `docs/SCHEMA_MIGRATION.md`.
+
+**Note:** The runtime projection change (above) will be a schema version bump (`schemaVersion: 2`). This migration strategy should be in place before that work begins.
 
 **Files:** `docs/SCHEMA_MIGRATION.md` (new)
 

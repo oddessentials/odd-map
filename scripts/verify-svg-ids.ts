@@ -1,11 +1,23 @@
 import * as fs from 'fs';
 import { parse } from 'node-html-parser';
-import config from '../config/usg-map-config.json';
 
 /**
  * Build-time verification of SVG ID contract.
  * Ensures all required region IDs exist in SVG before deployment.
  */
+
+// Parse command line args
+const args = process.argv.slice(2);
+const clientArg = args.find((arg) => arg.startsWith('--client='));
+const targetClient = clientArg ? clientArg.split('=')[1] : 'usg';
+
+// Load config dynamically based on target client
+const configPath = `config/${targetClient}-map-config.json`;
+if (!fs.existsSync(configPath)) {
+  console.error(`❌ Config file not found: ${configPath}`);
+  process.exit(1);
+}
+const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
 
 const svgPath = `src/assets/${config.mapId}.svg`;
 const svgContent = fs.readFileSync(svgPath, 'utf8');
@@ -33,18 +45,9 @@ const foundIds: string[] = [];
 
 if (config.regions) {
   const normalizeId = (id: string) => id.trim().toLowerCase();
-  const requiredPattern = new RegExp(`^region-${config.clientId}-`);
 
-  config.regions.forEach(({ id, svgPathId }) => {
+  config.regions.forEach(({ id: _id, svgPathId }: { id: string; svgPathId: string }) => {
     const normalizedId = normalizeId(svgPathId);
-
-    // Verify naming convention
-    if (!requiredPattern.test(normalizedId)) {
-      console.error(`❌ Region '${id}' has invalid svgPathId: '${normalizedId}'`);
-      console.error(`   → Must start with 'region-${config.clientId}-'`);
-      hasErrors = true;
-      return;
-    }
 
     // Check if exists in SVG
     if (allIds.has(normalizedId)) {

@@ -22,6 +22,13 @@ import {
   getOfficesByRegion,
 } from '../lib/client-config.js';
 
+/** Options to restore a previous map view on init (skips fitBounds). */
+export interface TileMapInitialView {
+  lat: number;
+  lon: number;
+  zoom: number;
+}
+
 export class TileMap {
   private provider: TileMapProvider | null = null;
   private container: HTMLElement;
@@ -42,7 +49,7 @@ export class TileMap {
     this.container.appendChild(this.mapContainer);
   }
 
-  async init(): Promise<void> {
+  async init(initialView?: TileMapInitialView): Promise<void> {
     this.provider = createTileMapProvider(this.config);
 
     const initOptions = {
@@ -87,14 +94,18 @@ export class TileMap {
     }
 
     // Load all offices as markers with clustering
-    this.loadOfficeMarkers();
+    this.loadOfficeMarkers(initialView);
   }
 
   /**
    * Load all offices as interactive markers on the tile map.
    * Uses TileMapProvider.setMarkers() for clustering support.
+   *
+   * When `initialView` is provided (state restoration after view switch),
+   * skips fitBounds and jumps directly to the saved coordinates to avoid
+   * a jarring zoom-out-then-zoom-in animation race.
    */
-  private loadOfficeMarkers(): void {
+  private loadOfficeMarkers(initialView?: TileMapInitialView): void {
     if (!this.provider) return;
 
     const offices = getClientOffices();
@@ -116,8 +127,14 @@ export class TileMap {
     // Pass all markers to provider for clustered rendering
     this.provider.setMarkers(this.markers);
 
-    // Fit view to show all markers
-    if (this.markers.length > 0) {
+    if (initialView) {
+      // Restore previous view instantly (no animation) to avoid race with fitBounds
+      this.provider.flyTo(initialView.lat, initialView.lon, {
+        zoom: initialView.zoom,
+        duration: 0,
+      });
+    } else if (this.markers.length > 0) {
+      // Fresh init — fit view to show all markers
       this.provider.fitBounds(this.markers);
     }
   }
