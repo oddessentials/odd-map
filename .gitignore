@@ -34,6 +34,7 @@ dist/
 
 #Test
 coverage/
+tests/.tmp-migration/
 
 #Agents
 .claude
