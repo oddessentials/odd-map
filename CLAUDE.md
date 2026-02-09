@@ -1,8 +1,11 @@
-﻿# odd-map Development Guidelines
+# odd-map Development Guidelines
 
 Auto-generated from all feature plans. Last updated: 2026-02-05
 
 ## Active Technologies
+
+- TypeScript 5.7 (ES2022 target), JavaScript (map-3d.js) + Vite 7.3.1, Zod ^4.3.5, d3-geo ^3.1.1 (move from devDependencies to dependencies), Three.js ^0.182.0 (014-runtime-lat-lon-projection)
+- Static JSON config files in `config/` directory (014-runtime-lat-lon-projection)
 
 - TypeScript 5.7 (ES2022 target), JavaScript (map-3d.js) + Three.js 0.182, Vite 7.3.1, MapLibre GL JS (new, ~200KB gzipped), Apple MapKit JS (new, CDN-loaded) (012-interactive-map-providers)
 
@@ -44,11 +47,10 @@ TypeScript 5.x (ES2022 target), JavaScript (map-3d.js): Follow standard conventi
 
 ## Recent Changes
 
+- 014-runtime-lat-lon-projection: Added TypeScript 5.7 (ES2022 target), JavaScript (map-3d.js) + Vite 7.3.1, Zod ^4.3.5, d3-geo ^3.1.1 (move from devDependencies to dependencies), Three.js ^0.182.0
+- 014-runtime-lat-lon-projection: Added TypeScript 5.7 (ES2022 target), JavaScript (map-3d.js) + Vite 7.3.1, Zod ^4.3.5, d3-geo ^3.1.1 (move from devDependencies to dependencies), Three.js ^0.182.0
+
 - 012-interactive-map-providers: Added TypeScript 5.7 (ES2022 target), JavaScript (map-3d.js) + Three.js 0.182, Vite 7.3.1, MapLibre GL JS (new, ~200KB gzipped), Apple MapKit JS (new, CDN-loaded)
-
-- 011-fix-marker-panel-state: Added TypeScript 5.7 (ES2022 target), JavaScript (map-3d.js) + Three.js 0.182, Vite 7.3.1
-
-- 010-drag-pan-behavior: Added TypeScript 5.7 (ES2022 target), JavaScript (map-3d.js) + Three.js 0.182, Vite 7.3.1, Vitest 4.0.17
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->
