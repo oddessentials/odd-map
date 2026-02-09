@@ -1,0 +1,32 @@
+{
+  "configVersion": 2,
+  "mapId": "usa-regions",
+  "clientId": "v2mixed",
+  "mapAssetHash": "0a59d058bfe5150fb4b135bf00c1daa5c4196a8a98ec01afe77d286eb0d5f16a",
+  "viewBox": { "x": 0, "y": 0, "width": 960, "height": 600 },
+  "projection": { "type": "geoAlbersUsa", "scale": 1276, "translate": [479, 299] },
+  "coordinates": [
+    {
+      "officeCode": "MIX PA1",
+      "lat": 40.2628,
+      "lon": -80.1631,
+      "svgOverride": { "x": 760.0, "y": 245.0 }
+    },
+    {
+      "officeCode": "MIX NY1",
+      "lat": 40.7128,
+      "lon": -74.006,
+      "svgOverride": { "x": 850.0, "y": 215.0 }
+    },
+    {
+      "officeCode": "MIX FL1",
+      "lat": 28.0787,
+      "lon": -82.5169
+    },
+    {
+      "officeCode": "MIX IL1",
+      "lat": 41.8781,
+      "lon": -87.6298
+    }
+  ]
+}

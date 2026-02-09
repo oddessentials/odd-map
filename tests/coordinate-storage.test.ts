@@ -4,17 +4,16 @@
  * Tests the direct coordinate storage system and projection script.
  */
 
-import { describe, it, expect, beforeAll } from 'vitest';
-import { getMarkerPosition, initProjection } from '../src/lib/projection';
+import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
+import { getMarkerPosition, initProjection, __clearAllClients } from '../src/lib/projection';
 import { loadClientConfig, getClientOffices } from '../src/lib/client-config';
 import { readFileSync } from 'fs';
 
-interface Coord {
+interface CoordV2 {
   officeCode: string;
-  svgX: number;
-  svgY: number;
   lat: number;
   lon: number;
+  svgOverride?: { x: number; y: number };
 }
 
 describe('Direct Coordinate Storage', () => {
@@ -30,34 +29,37 @@ describe('Direct Coordinate Storage', () => {
     expect(config.coordinates).toBeDefined();
     expect(config.coordinates.length).toBe(offices.length);
 
-    // Verify each office has coordinates
+    // v2 config: coordinates have lat/lon (projection resolves to SVG at runtime)
+    // Verify each office has coordinates with lat/lon
     offices.forEach((office) => {
-      const coord = config.coordinates.find((c: Coord) => c.officeCode === office.officeCode);
+      const coord = config.coordinates.find((c: CoordV2) => c.officeCode === office.officeCode);
       expect(coord).toBeDefined();
-      expect(coord.svgX).toBeGreaterThanOrEqual(0);
-      expect(coord.svgY).toBeGreaterThanOrEqual(0);
-      expect(coord.svgX).toBeLessThanOrEqual(960);
-      expect(coord.svgY).toBeLessThanOrEqual(600);
+      expect(coord.lat).toBeTypeOf('number');
+      expect(coord.lon).toBeTypeOf('number');
     });
   });
 
   it('coordinates are within map viewBox bounds', () => {
-    const config = JSON.parse(readFileSync('config/usg-map-config.json', 'utf8'));
+    // v2: verify via getMarkerPosition (runtime projection)
+    const offices = getClientOffices();
 
-    config.coordinates.forEach((coord: Coord) => {
-      expect(coord.svgX).toBeGreaterThanOrEqual(config.viewBox.x);
-      expect(coord.svgX).toBeLessThanOrEqual(config.viewBox.width);
-      expect(coord.svgY).toBeGreaterThanOrEqual(config.viewBox.y);
-      expect(coord.svgY).toBeLessThanOrEqual(config.viewBox.height);
+    offices.forEach((office) => {
+      const pos = getMarkerPosition(office.officeCode);
+      expect(pos.x).toBeGreaterThanOrEqual(0);
+      expect(pos.x).toBeLessThanOrEqual(960);
+      expect(pos.y).toBeGreaterThanOrEqual(0);
+      expect(pos.y).toBeLessThanOrEqual(600);
     });
   });
 
   it('no duplicate coordinates', () => {
-    const config = JSON.parse(readFileSync('config/usg-map-config.json', 'utf8'));
+    // v2: verify via getMarkerPosition (runtime projection)
+    const offices = getClientOffices();
     const coordSet = new Set();
 
-    config.coordinates.forEach((coord: Coord) => {
-      const key = `${Math.round(coord.svgX)},${Math.round(coord.svgY)}`;
+    offices.forEach((office) => {
+      const pos = getMarkerPosition(office.officeCode);
+      const key = `${Math.round(pos.x)},${Math.round(pos.y)}`;
       expect(coordSet.has(key)).toBe(false);
       coordSet.add(key);
     });
@@ -118,11 +120,95 @@ describe('Direct Coordinate Storage', () => {
     const config = JSON.parse(readFileSync('config/usg-map-config.json', 'utf8'));
     const offices = getClientOffices();
 
-    config.coordinates.forEach((coord: Coord) => {
+    config.coordinates.forEach((coord: CoordV2) => {
       const office = offices.find((o) => o.officeCode === coord.officeCode);
       expect(office).toBeDefined();
       expect(coord.lat).toBe(office!.coordinates.lat);
       expect(coord.lon).toBe(office!.coordinates.lon);
     });
+  });
+});
+
+/**
+ * T015: Config Regression — All Clients (v2)
+ *
+ * Verifies that every stored coordinate in all 4 v2 configs is retrievable
+ * via getMarkerPosition() after the v2 migration.
+ * Tests through the public API (not raw JSON fields) to be version-agnostic.
+ */
+describe('Config Regression (all clients) (T015)', () => {
+  const CLIENTS = ['usg', 'oddessentials', 'acme', 'demo'] as const;
+
+  beforeEach(() => {
+    __clearAllClients();
+  });
+
+  for (const clientId of CLIENTS) {
+    describe(`${clientId}`, () => {
+      it('every coordinate is retrievable via getMarkerPosition()', async () => {
+        await initProjection(clientId);
+
+        const config = JSON.parse(readFileSync(`config/${clientId}-map-config.json`, 'utf8'));
+
+        expect(config.coordinates.length).toBeGreaterThan(0);
+
+        config.coordinates.forEach((coord: CoordV2) => {
+          const position = getMarkerPosition(coord.officeCode);
+          expect(position).toBeDefined();
+          expect(position.x).toBeTypeOf('number');
+          expect(position.y).toBeTypeOf('number');
+
+          // For offices with svgOverride, verify exact match
+          if (coord.svgOverride) {
+            expect(position.x).toBe(coord.svgOverride.x);
+            expect(position.y).toBe(coord.svgOverride.y);
+          }
+        });
+      });
+
+      it('coordinate count matches config', async () => {
+        await initProjection(clientId);
+
+        const config = JSON.parse(readFileSync(`config/${clientId}-map-config.json`, 'utf8'));
+
+        // Every coordinate should resolve without error
+        let resolvedCount = 0;
+        config.coordinates.forEach((coord: CoordV2) => {
+          const position = getMarkerPosition(coord.officeCode);
+          expect(position).toBeDefined();
+          resolvedCount++;
+        });
+
+        expect(resolvedCount).toBe(config.coordinates.length);
+      });
+    });
+  }
+
+  it('all clients can be loaded sequentially and switched between', async () => {
+    // Init all clients
+    for (const clientId of CLIENTS) {
+      await initProjection(clientId);
+    }
+
+    // Verify each client's coords are accessible after switching
+    for (const clientId of CLIENTS) {
+      const config = JSON.parse(readFileSync(`config/${clientId}-map-config.json`, 'utf8'));
+
+      // switchClient is done internally by initProjection, but let's be explicit
+      // by re-initing (which triggers the cached fast-path)
+      await initProjection(clientId);
+
+      // Spot-check first and last coordinate
+      const first = config.coordinates[0];
+      const last = config.coordinates[config.coordinates.length - 1];
+
+      const posFirst = getMarkerPosition(first.officeCode);
+      expect(posFirst).toBeDefined();
+      expect(posFirst.x).toBeTypeOf('number');
+
+      const posLast = getMarkerPosition(last.officeCode);
+      expect(posLast).toBeDefined();
+      expect(posLast.x).toBeTypeOf('number');
+    }
   });
 });

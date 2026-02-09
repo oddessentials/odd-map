@@ -25,6 +25,8 @@
     "config:backup": "npx tsx scripts/config-backup.ts backup",
     "config:restore": "npx tsx scripts/config-backup.ts restore",
     "config:list": "npx tsx scripts/config-backup.ts list",
+    "migrate:verify": "npx tsx scripts/migrate-to-v2.ts",
+    "migrate:apply": "npx tsx scripts/migrate-to-v2.ts --apply",
     "test": "vitest",
     "test:infrastructure": "npx tsx scripts/verify-map-integrity.ts && vitest run",
     "test:ci": "npx tsx scripts/verify-all-clients.ts && vitest run",
@@ -57,6 +59,7 @@
   "dependencies": {
     "maplibre-gl": "5.17.0",
     "three": "^0.182.0",
+    "d3-geo": "^3.1.1",
     "topojson-client": "^3.1.0",
     "us-atlas": "^3.0.1"
   },
@@ -71,7 +74,6 @@
     "@types/node": "22.19.7",
     "@types/three": "0.182.0",
     "@vitest/coverage-v8": "4.0.17",
-    "d3-geo": "^3.1.1",
     "eslint": "9.39.2",
     "eslint-config-prettier": "10.1.8",
     "globals": "17.0.0",

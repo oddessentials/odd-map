@@ -1,5 +1,5 @@
 {
-  "configVersion": 1,
+  "configVersion": 2,
   "mapId": "usa-regions",
   "clientId": "acme",
   "mapAssetHash": "0a59d058bfe5150fb4b135bf00c1daa5c4196a8a98ec01afe77d286eb0d5f16a",
@@ -9,27 +9,38 @@
     "width": 960,
     "height": 600
   },
+  "projection": {
+    "type": "geoAlbersUsa",
+    "scale": 1194,
+    "translate": [472.1, 291.4]
+  },
   "coordinates": [
     {
       "officeCode": "ACME TX1",
       "lat": 32.7767,
       "lon": -96.797,
-      "svgX": 465.0,
-      "svgY": 380.0
+      "svgOverride": {
+        "x": 465,
+        "y": 380
+      }
     },
     {
       "officeCode": "ACME CA1",
       "lat": 34.0522,
       "lon": -118.2437,
-      "svgX": 140.0,
-      "svgY": 370.0
+      "svgOverride": {
+        "x": 140,
+        "y": 370
+      }
     },
     {
       "officeCode": "ACME NY1",
       "lat": 40.7128,
       "lon": -74.006,
-      "svgX": 790.0,
-      "svgY": 220.0
+      "svgOverride": {
+        "x": 790,
+        "y": 220
+      }
     }
   ],
   "regions": [
