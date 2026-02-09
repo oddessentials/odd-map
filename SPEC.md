@@ -25,12 +25,12 @@ Generated from a multi-perspective research team analysis (UX, Architecture, Dev
 
 **odd-logistics** is a standalone web application that generates valid configuration files for odd-map. Users interact with a MapLibre GL JS map to visually place offices, organize them into regions, assign personnel, pick brand colors, and export ready-to-use JSON config that plugs into odd-map without modification.
 
-The long-term goal is full config generation (both client config and map config). The MVP generates client config only because odd-map's current SVG coordinate system is being refactored to support runtime lat/lon projection (see [TODO.md](./TODO.md) and [Section 2](#2-svg-coordinate-coupling--odd-map-refactor) below).
+The long-term goal is full config generation (both client config and map config). The MVP generates client config only. odd-map's runtime lat/lon projection refactor has shipped (`configVersion: 2`), unblocking full map config generation in Phase 3 (see [Section 2](#2-svg-coordinate-coupling--odd-map-refactor)).
 
 ### Goals
 
 - Mobile-first, user-friendly config builder with the map as the primary workspace
-- Generate valid config JSON that passes odd-map's Zod schema validation (client config at MVP; full config after odd-map's runtime projection refactor)
+- Generate valid config JSON that passes odd-map's Zod schema validation (client config at MVP; full config generation unblocked now that odd-map has shipped runtime projection)
 - Enterprise-grade testing with deterministic test suite
 - Local development server with live reload
 - Deployed to GitHub Pages via `/docs` directory
@@ -47,35 +47,26 @@ The long-term goal is full config generation (both client config and map config)
 
 ## 2. SVG Coordinate Coupling & odd-map Refactor
 
-### The Problem (odd-map)
+### Resolved (Feature 014)
 
-odd-map's current architecture has a structural problem: **it does not use lat/lon for rendering**. It uses pre-computed SVG pixel coordinates (`svgX`/`svgY`) that are tightly coupled to a specific SVG file and a calibrated D3 projection. This is documented as a first-class concern in [TODO.md](./TODO.md).
+odd-map shipped **runtime lat/lon projection** in `configVersion: 2`. The pre-computed `svgX`/`svgY` fields have been replaced by a lazy-loaded d3-geo projection module (`src/lib/svg-projection.ts`) that converts lat/lon to SVG coordinates at runtime.
 
-Evidence from the odd-map codebase:
+**What changed in odd-map:**
 
-- `latLonToSvg()` in `src/lib/projection.ts` is **deprecated and throws an error**
-- SVG coordinates are pre-computed by `scripts/recapture-coordinates.ts` using a brute-force grid search over D3 projection parameters (`scale: 1276, translate: [479, 299]`)
-- `mapAssetHash` requires a SHA-256 hash of the actual SVG file
-- `svgPathId` values (e.g., `region-usg-northeast-region`) reference specific `<path>` elements inside the SVG
+- `configVersion: 2` schema stores only `lat`/`lon` per office (with optional `svgOverride` for manual placement)
+- `projection` block in map config (`type`, `scale`, `translate`) drives runtime coordinate conversion
+- `svgX`/`svgY` fields eliminated from the schema
+- All 4 client configs migrated to v2
+- Migration CLI (`scripts/migrate-to-v2.ts`) handles v1 → v2 conversion
 
-This coupling means:
+**What this means for odd-logistics:**
 
-- No external tool can currently generate a valid map config
-- Client onboarding requires running scripts inside the odd-map repo (no self-service path)
-- Any SVG change invalidates all existing coordinates and requires full recalibration
+| Phase         | What odd-logistics generates         | Status                                               |
+| ------------- | ------------------------------------ | ---------------------------------------------------- |
+| **MVP (now)** | Client config only (`*-client.json`) | Shipped — lat/lon coordinates work today             |
+| **Phase 3**   | Both client config AND map config    | **Unblocked** — odd-map's runtime projection is live |
 
-### The Fix (odd-map)
-
-odd-map will be refactored to use **runtime lat/lon projection**, eliminating the pre-computed `svgX`/`svgY` fields, the `mapAssetHash` requirement, and the calibration scripts. This is tracked as Option A in [TODO.md](./TODO.md) and will be a `schemaVersion: 2` migration.
-
-### Impact on odd-logistics
-
-| Phase             | What odd-logistics generates         | Depends on                                       |
-| ----------------- | ------------------------------------ | ------------------------------------------------ |
-| **MVP (now)**     | Client config only (`*-client.json`) | Nothing — lat/lon coordinates work today         |
-| **Post-refactor** | Both client config AND map config    | odd-map's runtime projection refactor completing |
-
-The MVP is scoped to client config not as a permanent limitation, but as a practical sequencing decision. Once odd-map ships runtime projection, odd-logistics will be updated to generate complete configs.
+Full map config generation is now a straightforward task: odd-logistics already captures lat/lon coordinates, region definitions, and theme config. The remaining work is generating the `configVersion: 2` map config JSON with projection parameters.
 
 ---
 
@@ -94,9 +85,9 @@ The MVP is scoped to client config not as a permanent limitation, but as a pract
 | Export              | JSON clipboard copy + file download + validation summary                                                                                 |
 | Import              | Load existing `*-client.json` for editing                                                                                                |
 
-### Out of Scope (MVP — pending odd-map refactor)
+### Out of Scope (MVP)
 
-- Map config generation (`*-map-config.json`) — blocked until odd-map ships runtime lat/lon projection
+- Map config generation (`*-map-config.json`) — now unblocked (odd-map shipped `configVersion: 2`), planned for Phase 3
 - `theme.cameraViews` — requires 3D scene knowledge tied to odd-map's Three.js rendering
 - `clients.*.json` registry file generation — documented as manual step
 - vCard URL generation
@@ -682,26 +673,32 @@ This is what odd-logistics generates.
 
 ### 6.2 Map Config (`{clientId}-map-config.json`)
 
-Not generated by odd-logistics at MVP. Will be generated after odd-map's runtime projection refactor eliminates the SVG coordinate coupling. Documented here for reference and to inform the post-refactor integration.
+Not generated by odd-logistics at MVP. Now unblocked — odd-map has shipped `configVersion: 2` with runtime lat/lon projection. Planned for Phase 3.
 
 ```typescript
 {
-  configVersion: 1,
-  mapId: string,
+  configVersion: 2,                    // Must be 2 (v1 is deprecated)
+  mapId: string,                       // SVG asset identifier (e.g., "usa-regions")
   clientId: string,
-  mapAssetHash: string,                // 64-char SHA-256 hex
+  mapAssetHash: string,                // 64-char SHA-256 hex (SVG integrity check)
   viewBox: { x: number, y: number, width: number, height: number },
+  projection: {                        // Required in v2 — drives runtime lat/lon → SVG conversion
+    type: "geoAlbersUsa",              // D3 projection type
+    scale: number,                     // Projection scale factor
+    translate: [number, number]        // Projection center offset [x, y]
+  },
   coordinates: [{
     officeCode: string,
-    lat: number, lon: number,
-    svgX: number, svgY: number         // SVG pixel positions (requires D3 projection)
+    lat: number, lon: number,          // Canonical coordinates — projected to SVG at runtime
+    svgOverride?: {                    // Optional manual SVG placement (bypasses projection)
+      x: number, y: number
+    }
   }],
   regions?: [{
     id: string,
     name: string,
-    svgPathId: string                  // "region-{clientId}-{regionId}"
-  }],
-  projection?: { type: string, scale: number, translate: [number, number] }
+    svgPathId: string                  // SVG <path> element ID (e.g., "region-usg-northeast-region")
+  }]
 }
 ```
 
@@ -805,17 +802,17 @@ Target: ~200-300 test lines covering critical paths. Match odd-map's coverage co
 
 ## 8. Risk Analysis & Mitigations
 
-| Risk                                | Severity               | Mitigation                                                                                                                                                       |
-| ----------------------------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| SVG coordinate coupling in odd-map  | **High — being fixed** | odd-map refactoring to runtime lat/lon projection (see [TODO.md](./TODO.md)). MVP generates client config only; full config generation unblocked after refactor. |
-| Nominatim rate limits (1 req/sec)   | Medium                 | Queue with rate limiter; manual coordinate entry as fallback; debounce input 500ms                                                                               |
-| Nominatim accuracy (no suite-level) | Medium                 | Show confidence level; let users adjust pins on map; don't claim "verified" for geocoded results                                                                 |
-| localStorage data loss              | Medium                 | Treat as convenience cache only; primary export is file download/clipboard; warn users                                                                           |
-| Schema drift between repos          | Medium                 | Copy-with-version-pin + CI drift detection script. Will revisit shared package after odd-map schema v2 stabilizes.                                               |
-| Two-file workflow (temporary)       | Medium                 | MVP: client config from odd-logistics, map config from odd-map scripts. Post-refactor: odd-logistics generates both.                                             |
-| Bundle size                         | Low                    | MapLibre (~200KB gzip) is largest dep; lazy-load; total < 300KB gzip                                                                                             |
-| Mobile MapLibre performance         | Low                    | MapLibre is well-optimized for mobile; no 3D rendering overhead                                                                                                  |
-| Accessibility gaps                  | Low                    | 44px targets, keyboard nav, aria-live, focus trapping are MVP requirements                                                                                       |
+| Risk                                | Severity     | Mitigation                                                                                                                                 |
+| ----------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| SVG coordinate coupling in odd-map  | **Resolved** | odd-map shipped runtime lat/lon projection (`configVersion: 2`). Full map config generation is now unblocked for Phase 3.                  |
+| Nominatim rate limits (1 req/sec)   | Medium       | Queue with rate limiter; manual coordinate entry as fallback; debounce input 500ms                                                         |
+| Nominatim accuracy (no suite-level) | Medium       | Show confidence level; let users adjust pins on map; don't claim "verified" for geocoded results                                           |
+| localStorage data loss              | Medium       | Treat as convenience cache only; primary export is file download/clipboard; warn users                                                     |
+| Schema drift between repos          | Medium       | Copy-with-version-pin + CI drift detection script. odd-map schema v2 has stabilized; shared package extraction can proceed when warranted. |
+| Two-file workflow (temporary)       | Medium       | MVP: client config from odd-logistics, map config from odd-map scripts. Phase 3: odd-logistics generates both (now unblocked).             |
+| Bundle size                         | Low          | MapLibre (~200KB gzip) is largest dep; lazy-load; total < 300KB gzip                                                                       |
+| Mobile MapLibre performance         | Low          | MapLibre is well-optimized for mobile; no 3D rendering overhead                                                                            |
+| Accessibility gaps                  | Low          | 44px targets, keyboard nav, aria-live, focus trapping are MVP requirements                                                                 |
 
 ---
 
@@ -853,10 +850,10 @@ Target: ~200-300 test lines covering critical paths. Match odd-map's coverage co
 - Confetti animation on successful copy
 - Illustrated empty states
 
-### Phase 3: Full Config Generation (after odd-map refactor)
+### Phase 3: Full Config Generation (unblocked)
 
-- Once odd-map ships runtime lat/lon projection (`schemaVersion: 2`), update odd-logistics to generate both client config and map config
-- Map config generation becomes straightforward: lat/lon coordinates (already captured), region definitions, and simplified metadata — no SVG coupling
+- odd-map has shipped runtime lat/lon projection (`configVersion: 2`) — this phase is now unblocked
+- Map config generation is straightforward: lat/lon coordinates (already captured), projection parameters, region definitions, and simplified metadata — no SVG coupling
 - Update copied schemas to match odd-map's v2 schema
 - Extract shared schemas to `@oddessentials/map-config-schema` npm package if warranted at that point
 
@@ -866,15 +863,15 @@ Target: ~200-300 test lines covering critical paths. Match odd-map's coverage co
 
 These items were discussed during research but explicitly deferred:
 
-| Item                           | Status                   | Notes                                                                                                  |
-| ------------------------------ | ------------------------ | ------------------------------------------------------------------------------------------------------ |
-| Map config generation          | **Blocked → Phase 3**    | Waiting on odd-map's runtime projection refactor. Will be unblocked when `svgX`/`svgY` are eliminated. |
-| `theme.cameraViews`            | Deferred                 | Requires 3D scene knowledge tied to odd-map's Three.js rendering                                       |
-| Client registry generation     | Deferred                 | Simple enough to document as a manual step                                                             |
-| vCard URL generation           | Deferred                 | Low priority, no generation logic needed                                                               |
-| E2E browser tests (Playwright) | Deferred                 | Too heavy for MVP; add after UI stabilizes                                                             |
-| Visual regression testing      | Deferred                 | Not needed until UI is stable                                                                          |
-| Shared npm schema package      | **Revisit at schema v2** | Premature now; reassess when odd-map ships `schemaVersion: 2`                                          |
-| React/Vue/framework adoption   | Not planned              | Vanilla TS is sufficient and matches odd-map                                                           |
-| Backend/database               | Not planned              | Not needed for a config generator tool                                                                 |
-| Multi-user collaboration       | Not planned              | Out of scope for a single-user config tool                                                             |
+| Item                           | Status                  | Notes                                                                                                     |
+| ------------------------------ | ----------------------- | --------------------------------------------------------------------------------------------------------- |
+| Map config generation          | **Unblocked → Phase 3** | odd-map shipped `configVersion: 2` with runtime projection. `svgX`/`svgY` eliminated. Ready to implement. |
+| `theme.cameraViews`            | Deferred                | Requires 3D scene knowledge tied to odd-map's Three.js rendering                                          |
+| Client registry generation     | Deferred                | Simple enough to document as a manual step                                                                |
+| vCard URL generation           | Deferred                | Low priority, no generation logic needed                                                                  |
+| E2E browser tests (Playwright) | Deferred                | Too heavy for MVP; add after UI stabilizes                                                                |
+| Visual regression testing      | Deferred                | Not needed until UI is stable                                                                             |
+| Shared npm schema package      | **Ready to evaluate**   | odd-map's v2 schema has stabilized; extraction to shared package can proceed when warranted               |
+| React/Vue/framework adoption   | Not planned             | Vanilla TS is sufficient and matches odd-map                                                              |
+| Backend/database               | Not planned             | Not needed for a config generator tool                                                                    |
+| Multi-user collaboration       | Not planned             | Out of scope for a single-user config tool                                                                |

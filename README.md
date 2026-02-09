@@ -1,7 +1,7 @@
 # odd-map
 
 [![CI](https://github.com/oddessentials/odd-map/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/oddessentials/odd-map/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/tests-612_passing-brightgreen)](https://github.com/oddessentials/odd-map/actions)
+[![Tests](https://img.shields.io/badge/tests-734_passing-brightgreen)](https://github.com/oddessentials/odd-map/actions)
 [![Demo](https://img.shields.io/badge/demo-live-blue)](https://oddessentials.github.io/odd-map/)
 
 A white-label, mobile-friendly interactive office locator with three rendering modes, region-based navigation, and multi-client theming. Fully static — no backend required.
@@ -10,17 +10,18 @@ A white-label, mobile-friendly interactive office locator with three rendering m
 
 ---
 
-## Features
+## ✨ Features
 
-- **Three Map Modes** — 2D SVG with pan/zoom, 3D Three.js globe with rotation, and interactive tile map (MapLibre GL / Apple MapKit / Google Maps)
-- **Region-Based Navigation** — Click regions to zoom in, select offices for full details with inline mini-map
-- **White-Label Multi-Client** — Per-client branding, theme colors, office data, and map provider config via JSON
-- **Mobile-First Touch** — Pinch-to-zoom, swipe-to-dismiss bottom sheet, 44px touch targets, safe area insets for notched devices
-- **Collapsible Sidebars** — Desktop sidebars collapse/expand with smooth CSS Grid transitions and ARIA-compliant toggle buttons
-- **Accessible** — Keyboard navigation, ARIA labels, focus management, reduced-motion support
-- **Zero Backend** — Fully static build deployable to any CDN, S3 bucket, or GitHub Pages
+- 🗺️ **Three Map Modes** — 2D SVG with pan/zoom, 3D Three.js globe with rotation, and interactive tile map (MapLibre GL / Apple MapKit / Google Maps)
+- 📍 **Region-Based Navigation** — Click regions to zoom in, select offices for full details with inline mini-map
+- 🏷️ **White-Label Multi-Client** — Per-client branding, theme colors, office data, and map provider config via JSON
+- 🌐 **Runtime Lat/Lon Projection** — v2 config schema with d3-geo projection; no more pre-computed SVG coordinates
+- 📱 **Mobile-First Touch** — Pinch-to-zoom, swipe-to-dismiss bottom sheet, 44px touch targets, safe area insets for notched devices
+- 📐 **Collapsible Sidebars** — Desktop sidebars collapse/expand with smooth CSS Grid transitions and ARIA-compliant toggle buttons
+- ♿ **Accessible** — Keyboard navigation, ARIA labels, focus management, reduced-motion support
+- ⚡ **Zero Backend** — Fully static build deployable to any CDN, S3 bucket, or GitHub Pages
 
-## Quick Start
+## 🚀 Quick Start
 
 ```bash
 npm install
@@ -28,7 +29,7 @@ npm run dev          # Start dev server at http://localhost:3000
 npm test             # Run tests in watch mode
 ```
 
-## Switching Clients
+## 🔀 Switching Clients
 
 The active client is controlled by the `?client=` URL query parameter. Each client gets its own branding, theme, and office data.
 
@@ -40,21 +41,21 @@ https://your-domain.com/?client=acme             # ACME Corp (Google Maps)
 
 To add a new client, create two JSON files in `config/` and register the client ID in the appropriate `clients.*.json` registry. See [Multi-Client Configuration](#multi-client-configuration) for details.
 
-## Commands
+## 🛠️ Commands
 
 | Command                                 | Description                                                         |
 | --------------------------------------- | ------------------------------------------------------------------- |
 | `npm run dev`                           | Start Vite dev server                                               |
 | `npm run build`                         | Production build to `dist/`                                         |
 | `npm run verify`                        | Full CI check — lint, format, typecheck, client verification, tests |
-| `npm test`                              | Run 612 tests in watch mode (Vitest)                                |
+| `npm test`                              | Run 734 tests in watch mode (Vitest)                                |
 | `npm run test:ci`                       | Verify all clients + run tests once                                 |
 | `npm run typecheck`                     | TypeScript type checking                                            |
 | `npm run lint`                          | ESLint check                                                        |
 | `npm run format`                        | Prettier format                                                     |
 | `node scripts/generate-mapkit-token.js` | Generate Apple MapKit JWT from `.p8` key                            |
 
-## Project Structure
+## 📁 Project Structure
 
 ```
 odd-map/
@@ -92,15 +93,15 @@ odd-map/
 │   ├── styles/                     # CSS (design tokens, base, app)
 │   ├── types/                      # TypeScript type definitions
 │   └── index.html                  # HTML entry point
-├── tests/                    # 612 Vitest unit tests across 43 suites
+├── tests/                    # 734 Vitest unit tests across 46 suites
 └── docs/                     # GitHub Pages deployment (auto-generated)
 ```
 
-## Map Providers
+## 🌍 Map Providers
 
 odd-map supports three tile map providers through a unified abstraction layer. The active provider is configured per-client in the `theme.mapProvider` section of the client config JSON.
 
-### Built-in Providers
+### 🔌 Built-in Providers
 
 | Provider            | Config Value | Auth        | Cost                | Notes                                                             |
 | ------------------- | ------------ | ----------- | ------------------- | ----------------------------------------------------------------- |
@@ -108,7 +109,7 @@ odd-map supports three tile map providers through a unified abstraction layer. T
 | **Apple MapKit JS** | `"apple"`    | JWT token   | Free tier available | CDN-loaded. Requires `appleMapToken` in config                    |
 | **Google Maps**     | `"google"`   | API key     | Pay-as-you-go       | CDN-loaded. Requires `googleMapsApiKey` in config                 |
 
-### Safe-Fallback Behavior
+### 🛡️ Safe-Fallback Behavior
 
 All key-driven providers (Apple, Google) automatically fall back to MapLibre when credentials are missing or empty. This ensures the map always renders, even in demos or when API keys haven't been configured yet.
 
@@ -118,7 +119,7 @@ Requested: "google" + no API key   → Falls back to MapLibre (with console warn
 Requested: "maplibre"              → Always works (no credentials needed)
 ```
 
-### Configuring a Provider
+### ⚙️ Configuring a Provider
 
 Set the provider in your client config file (`config/{client}-client.json`):
 
@@ -136,7 +137,7 @@ Set the provider in your client config file (`config/{client}-client.json`):
 }
 ```
 
-### Where to Put API Keys
+### 🔑 Where to Put API Keys
 
 API keys are stored directly in the client config JSON files. Since this is a static site, keys are served as part of the client bundle.
 
@@ -171,7 +172,7 @@ node scripts/generate-mapkit-token.js \
 
 > **Security note:** Since this is a client-side application, API keys are visible in the browser. Always apply domain restrictions and usage quotas to your keys. MapLibre requires no API key at all.
 
-### Current Client Defaults
+### 📊 Current Client Defaults
 
 | Client            | Default Provider | Fallback                    |
 | ----------------- | ---------------- | --------------------------- |
@@ -179,7 +180,7 @@ node scripts/generate-mapkit-token.js \
 | **usg**           | MapLibre         | N/A (always works)          |
 | **acme**          | Google Maps      | MapLibre (no key in demo)   |
 
-## Multi-Client Configuration
+## 🏢 Multi-Client Configuration
 
 Each client requires two JSON files in `config/`:
 
@@ -197,7 +198,7 @@ Clients are registered in `clients.*.json` (one per environment). The active cli
 3. Add `"yourclient"` to the `clients` array in the appropriate `clients.*.json`
 4. Run `npm run verify` to validate
 
-## Data Pipeline (Python)
+## 🔧 Data Pipeline (Python)
 
 The Python scripts in `scripts/` automate scraping, geocoding, and packaging office location data into client config files. This pipeline was built for [USG Insurance Services](https://www.usgins.com/locations) as a reference implementation and can be adapted for any client with a public locations page.
 
@@ -215,30 +216,30 @@ npm run build:data   # Generate config JSON from scraped data
 
 **Requirements:** Python 3.8+ with dependencies from `scripts/requirements.txt`
 
-## Tech Stack
+## 🧰 Tech Stack
 
 | Layer        | Technology                                          |
 | ------------ | --------------------------------------------------- |
 | Language     | TypeScript 5.7 (ES2022), JavaScript (3D module)     |
 | Bundler      | Vite 7.3.1                                          |
-| Testing      | Vitest 4.0.17, jsdom — 612 tests across 43 suites   |
+| Testing      | Vitest 4.0.17, jsdom — 734 tests across 46 suites   |
 | 3D Rendering | Three.js 0.182                                      |
 | Tile Maps    | MapLibre GL JS, Apple MapKit JS, Google Maps JS API |
 | Validation   | Zod 4.3                                             |
 | CI/CD        | GitHub Actions, Husky, lint-staged, commitlint      |
 | Linting      | ESLint 9, Prettier 3.8                              |
 
-## Requirements
+## 📋 Requirements
 
 - **Node.js 22+** — Dev server, build, tests
 - **Python 3.8+** — Data pipeline only (optional, not needed for development)
 
-## Deployment
+## 🚢 Deployment
 
 The demo site auto-deploys to GitHub Pages on every push to `main`. The CI workflow builds with the demo client registry and outputs to `docs/`.
 
 For production, run `npm run build` and serve `dist/` from any static host.
 
-## Licence
+## 📄 Licence
 
 ISC License — see [LICENCE.md](./LICENCE.md) for details.
