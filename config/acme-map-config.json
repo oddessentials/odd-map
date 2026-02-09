@@ -47,17 +47,17 @@
     {
       "id": "south",
       "name": "South Region",
-      "svgPathId": "region-acme-south-region"
+      "svgPathId": "region-usg-south-region"
     },
     {
       "id": "west",
       "name": "West Region",
-      "svgPathId": "region-acme-west-region"
+      "svgPathId": "region-usg-west-region"
     },
     {
       "id": "northeast",
       "name": "Northeast Region",
-      "svgPathId": "region-acme-northeast-region"
+      "svgPathId": "region-usg-northeast-region"
     }
   ]
 }

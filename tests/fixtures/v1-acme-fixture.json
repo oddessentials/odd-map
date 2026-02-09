@@ -10,8 +10,8 @@
     { "officeCode": "ACME NY1", "lat": 40.7128, "lon": -74.006, "svgX": 790, "svgY": 220 }
   ],
   "regions": [
-    { "id": "south", "name": "South Region", "svgPathId": "region-acme-south-region" },
-    { "id": "west", "name": "West Region", "svgPathId": "region-acme-west-region" },
-    { "id": "northeast", "name": "Northeast Region", "svgPathId": "region-acme-northeast-region" }
+    { "id": "south", "name": "South Region", "svgPathId": "region-usg-south-region" },
+    { "id": "west", "name": "West Region", "svgPathId": "region-usg-west-region" },
+    { "id": "northeast", "name": "Northeast Region", "svgPathId": "region-usg-northeast-region" }
   ]
 }

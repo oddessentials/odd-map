@@ -411,6 +411,34 @@ describe('TileMap', () => {
     // Provider should be cleaned up even though init was in progress
     expect(slowProvider.dispose).toHaveBeenCalled();
   });
+
+  it('init with initialView skips fitBounds and calls flyTo with duration 0', async () => {
+    const tileMap = new TileMap(container, {});
+    await tileMap.init({ lat: 40.7128, lon: -74.006, zoom: 12 });
+
+    // Markers should still be loaded
+    expect(mockProvider.setMarkers).toHaveBeenCalled();
+
+    // fitBounds should NOT be called when initialView is provided
+    expect(mockProvider.fitBounds).not.toHaveBeenCalled();
+
+    // flyTo should be called with the restored coordinates and duration 0 (instant)
+    expect(mockProvider.flyTo).toHaveBeenCalledWith(40.7128, -74.006, { zoom: 12, duration: 0 });
+
+    tileMap.dispose();
+  });
+
+  it('init without initialView calls fitBounds normally', async () => {
+    const tileMap = new TileMap(container, {});
+    await tileMap.init();
+
+    expect(mockProvider.setMarkers).toHaveBeenCalled();
+    expect(mockProvider.fitBounds).toHaveBeenCalled();
+    // flyTo should NOT have been called during init (only fitBounds)
+    expect(mockProvider.flyTo).not.toHaveBeenCalled();
+
+    tileMap.dispose();
+  });
 });
 
 describe('TileMap provider fallback', () => {

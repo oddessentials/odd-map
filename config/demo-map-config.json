@@ -38,12 +38,12 @@
     {
       "id": "southeast",
       "name": "Southeast Region",
-      "svgPathId": "region-demo-southeast-region"
+      "svgPathId": "region-usg-southeast-region"
     },
     {
       "id": "west",
       "name": "West Region",
-      "svgPathId": "region-demo-west-region"
+      "svgPathId": "region-usg-west-region"
     }
   ]
 }

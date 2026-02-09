@@ -15,6 +15,7 @@ import type { MarkerVisualState } from './lib/marker-state.js';
 import { MapSvg } from './components/map-svg.js';
 import { Map3D } from './components/map-3d.js';
 import { TileMap } from './components/tile-map.js';
+import type { TileMapInitialView } from './components/tile-map.js';
 import { DetailsPanel } from './components/details-panel.js';
 import { SpecialtyDivisionsPanel } from './components/specialty-divisions.js';
 import { RegionList } from './components/region-list.js';
@@ -262,7 +263,7 @@ class App {
     this.updateUI();
   }
 
-  private async initMap(): Promise<void> {
+  private async initMap(tileInitialView?: TileMapInitialView): Promise<void> {
     if (!this.mapContainer) return;
 
     // Dispose existing map if switching
@@ -293,7 +294,7 @@ class App {
     } else if (this.mapMode === 'tile') {
       try {
         const tileMap = new TileMap(this.mapContainer, mapOptions);
-        await tileMap.init();
+        await tileMap.init(tileInitialView);
         this.map = tileMap;
         document.body.dataset.mapMode = 'tile';
       } catch (e) {
@@ -339,8 +340,33 @@ class App {
       const wasOffice = this.selectedOffice; // Keep for panel restoration
       const wasRegion = this.selectedRegion; // Keep for panel restoration
 
+      // For tile mode: compute initialView so init() can jump directly to the
+      // restored location instead of racing fitBounds vs flyTo animations.
+      let tileInitialView: TileMapInitialView | undefined;
+      if (mode === 'tile') {
+        if (wasOffice?.coordinates) {
+          tileInitialView = {
+            lat: wasOffice.coordinates.lat,
+            lon: wasOffice.coordinates.lon,
+            zoom: 12,
+          };
+        } else if (wasRegionName) {
+          // Region restore: compute centroid from region offices
+          const regionOffices = getClientOffices().filter(
+            (o) => 'regionName' in o && o.regionName === wasRegionName
+          );
+          if (regionOffices.length > 0) {
+            const avgLat =
+              regionOffices.reduce((sum, o) => sum + o.coordinates.lat, 0) / regionOffices.length;
+            const avgLon =
+              regionOffices.reduce((sum, o) => sum + o.coordinates.lon, 0) / regionOffices.length;
+            tileInitialView = { lat: avgLat, lon: avgLon, zoom: 6 };
+          }
+        }
+      }
+
       this.mapMode = mode;
-      await this.initMap(); // CRITICAL: Must await full initialization
+      await this.initMap(tileInitialView); // CRITICAL: Must await full initialization
       this.updateModeSelector();
       this.updateSpinButtonVisibility();
       this.updateTileStyleButtonVisibility();

@@ -164,13 +164,12 @@ describe('Migration Script', () => {
   });
 
   describe('svgPathId validation warnings', () => {
-    it('warns about missing SVG IDs for ACME regions (FR-010)', () => {
+    it('no warnings for ACME regions when svgPathIds match SVG (FR-010)', () => {
       const { stderr, exitCode } = runMigrate(path.join(FIXTURE_DIR, 'v1-acme-fixture.json'));
 
-      // Migration succeeds despite warnings
+      // Migration succeeds with no svgPathId mismatch warnings
       expect(exitCode).toBe(0);
-      expect(stderr).toContain('svgPathId mismatches');
-      expect(stderr).toContain('region-acme-south-region');
+      expect(stderr).not.toContain('svgPathId mismatches');
     });
   });
 
