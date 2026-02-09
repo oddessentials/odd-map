@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "clientId": "demo",
+  "name": "Demo Company",
+  "copyrightHolder": "Demo Company Inc.",
+  "tagline": "Interactive office locator demo.",
+  "offices": [
+    {
+      "officeCode": "DEMO FL1",
+      "state": "Florida",
+      "city": "Miami",
+      "officeType": "Branch Office",
+      "address": "200 S Biscayne Blvd, Miami, FL 33131",
+      "region": "Southeast Region",
+      "coordinates": {
+        "lat": 25.7617,
+        "lon": -80.1918,
+        "source": "city_centroid",
+        "confidence": "medium",
+        "approximate": true
+      }
+    },
+    {
+      "officeCode": "DEMO WA1",
+      "state": "Washington",
+      "city": "Seattle",
+      "officeType": "Branch Office",
+      "address": "400 Broad St, Seattle, WA 98109",
+      "region": "West Region",
+      "coordinates": {
+        "lat": 47.6062,
+        "lon": -122.3321,
+        "source": "city_centroid",
+        "confidence": "medium",
+        "approximate": true
+      }
+    }
+  ],
+  "theme": {
+    "primaryColor": "#1a5276",
+    "accentColor": "#2e86c1",
+    "mapProvider": {
+      "provider": "maplibre",
+      "defaultZoom": 14
+    }
+  }
+}

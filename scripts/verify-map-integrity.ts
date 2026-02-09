@@ -88,7 +88,18 @@ if (
 // 3. Verify all offices have coordinates (with normalization)
 const normalizeOfficeCode = (code: string) => code.trim().toUpperCase();
 const clientConfigPath = `config/${targetClient}-client.json`;
-if (fs.existsSync(clientConfigPath)) {
+if (!fs.existsSync(clientConfigPath)) {
+  if (strictMode) {
+    fail(
+      `Client config not found: ${clientConfigPath}`,
+      `Create the client config or remove this client from the registry`
+    );
+  } else {
+    console.warn(
+      `⚠️  Client config not found: ${clientConfigPath} — skipping office coverage check`
+    );
+  }
+} else {
   const clientConfig = JSON.parse(fs.readFileSync(clientConfigPath, 'utf8'));
   const allOffices: ClientOffice[] = clientConfig.offices;
   const configCodes = new Set(
@@ -159,9 +170,9 @@ for (const coord of config.coordinates) {
 
   if (
     resolved.x < config.viewBox.x ||
-    resolved.x > config.viewBox.width ||
+    resolved.x > config.viewBox.x + config.viewBox.width ||
     resolved.y < config.viewBox.y ||
-    resolved.y > config.viewBox.height
+    resolved.y > config.viewBox.y + config.viewBox.height
   ) {
     fail(
       `Coordinate out of bounds: ${resolved.officeCode} (${resolved.x.toFixed(2)}, ${resolved.y.toFixed(2)})`,

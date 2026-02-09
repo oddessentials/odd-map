@@ -56,9 +56,12 @@ const DEFAULT_TRANSLATE: [number, number] = [479, 299];
 
 function parseArgs(argv: string[]) {
   const args = argv.slice(2);
-  const configPath = args.find((a) => !a.startsWith('--'));
   const apply = args.includes('--apply');
+  const verify = args.includes('--verify');
   const inferProjection = args.includes('--infer-projection');
+
+  // Flags that consume the next arg as their value
+  const flagsWithValues = new Set(['--output', '--override-threshold']);
 
   let outputPath: string | undefined;
   const outputIdx = args.indexOf('--output');
@@ -70,6 +73,22 @@ function parseArgs(argv: string[]) {
   const thresholdIdx = args.indexOf('--override-threshold');
   if (thresholdIdx !== -1 && args[thresholdIdx + 1]) {
     overrideThreshold = parseFloat(args[thresholdIdx + 1]);
+  }
+
+  // Find positional config path: first arg that is not a flag and not a flag's value
+  let configPath: string | undefined;
+  for (let i = 0; i < args.length; i++) {
+    if (args[i].startsWith('--')) {
+      if (flagsWithValues.has(args[i])) i++; // skip the value token
+      continue;
+    }
+    configPath = args[i];
+    break;
+  }
+
+  if (verify && apply) {
+    console.error('Error: --verify and --apply are mutually exclusive.');
+    return { configPath: undefined, apply, outputPath, inferProjection, overrideThreshold };
   }
 
   return { configPath, apply, outputPath, inferProjection, overrideThreshold };
@@ -214,7 +233,7 @@ function validateSvgPathIds(
 
 // --- Migration logic ---
 
-function migrate(argv: string[]): number {
+export function migrate(argv: string[]): number {
   const { configPath, apply, outputPath, inferProjection, overrideThreshold } = parseArgs(argv);
 
   if (!configPath) {
@@ -365,9 +384,15 @@ function migrate(argv: string[]): number {
     );
   }
 
+  // Build row lookup map for O(1) access
+  const rowByOfficeCode = new Map(rows.map((r) => [r.officeCode, r]));
+
   // Build v2 config
   const v2Coordinates = v1Config.coordinates.map((coord) => {
-    const row = rows.find((r) => r.officeCode === coord.officeCode)!;
+    const row = rowByOfficeCode.get(coord.officeCode);
+    if (!row) {
+      throw new Error(`Internal error: no migration row for officeCode "${coord.officeCode}"`);
+    }
     const base: {
       officeCode: string;
       lat: number;
@@ -417,7 +442,16 @@ function migrate(argv: string[]): number {
   return exitCode;
 }
 
-// --- Main ---
+// --- Main (only when run directly) ---
 
-const exitCode = migrate(process.argv);
-process.exit(exitCode);
+import { fileURLToPath } from 'url';
+
+const isDirectRun =
+  typeof process !== 'undefined' &&
+  process.argv[1] &&
+  fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
+
+if (isDirectRun) {
+  const exitCode = migrate(process.argv);
+  process.exit(exitCode);
+}
