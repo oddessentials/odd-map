@@ -2,11 +2,11 @@
 
 [![CI](https://github.com/oddessentials/odd-map/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/oddessentials/odd-map/actions/workflows/ci.yml)
 [![Tests](https://img.shields.io/badge/tests-734_passing-brightgreen)](https://github.com/oddessentials/odd-map/actions)
-[![Demo](https://img.shields.io/badge/demo-live-blue)](https://oddessentials.github.io/odd-map/)
+[![Demo](https://img.shields.io/badge/demo-live-blue)](https://maps.oddessentials.com/)
 
 A white-label, mobile-friendly interactive office locator with three rendering modes, region-based navigation, and multi-client theming. Fully static — no backend required.
 
-**[View Live Demo](https://oddessentials.github.io/odd-map/)** · Works on desktop & mobile
+**[View Live Demo](https://maps.oddessentials.com/)** · Works on desktop & mobile
 
 ---
 
@@ -212,7 +212,7 @@ npm run geocode      # Geocode addresses to lat/lon coordinates
 npm run build:data   # Generate config JSON from scraped data
 ```
 
-> See the USG-generated config in action: [oddessentials.github.io/odd-map/?client=usg](https://oddessentials.github.io/odd-map/?client=usg)
+> See the USG-generated config in action: [maps.oddessentials.com/?client=usg](https://maps.oddessentials.com/?client=usg)
 
 **Requirements:** Python 3.8+ with dependencies from `scripts/requirements.txt`
 
