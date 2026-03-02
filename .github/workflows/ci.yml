@@ -62,7 +62,7 @@ jobs:
         run: npm ci
 
       - name: Build demo site
-        run: VITE_CLIENT_REGISTRY=demo npx vite build --base /odd-map/
+        run: VITE_CLIENT_REGISTRY=demo npx vite build --base /
 
       - name: Replace docs with fresh build
         run: |
