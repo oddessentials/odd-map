@@ -3,7 +3,11 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import { getMarkerPosition, initProjection } from '../src/lib/projection';
 import { loadClientConfig, getClientOffices } from '../src/lib/client-config';
-import { validateImportMap } from '../src/lib/client-registry';
+import {
+  validateImportMap,
+  validateProdImportMap,
+  getAvailableClients,
+} from '../src/lib/client-registry';
 import type { ClientRegistry } from '../src/lib/client-registry';
 
 describe('Cross-Environment Config Loading', () => {
@@ -95,21 +99,27 @@ describe('Import Map Validation (Item 7)', () => {
     expect(result.errors.some((e) => e.includes('TEST_CONFIG_IMPORT_MAP'))).toBe(true);
   });
 
-  it('data-driven fixture clients skip client config validation', () => {
-    const fakeRegistry: ClientRegistry = {
-      clients: ['usg', 'acme', 'demo'],
+  it('fixtureClients exempts a client that has no client-config map entry', () => {
+    // `demo` is intentionally absent from TEST_CLIENT_CONFIG_MAP; the fixtureClients
+    // exemption is the load-bearing reason it produces no error. Positive + negative
+    // control (`acme` is now in the map and would pass either way, so it can't prove
+    // the exemption works — `demo` can).
+    const base: ClientRegistry = {
+      clients: ['usg', 'demo'],
       configPath: 'config/',
       clientConfigPath: 'config/',
-      fixtureClients: ['acme', 'demo'],
     };
-    const result = validateImportMap(fakeRegistry);
-    // acme/demo should not produce TEST_CLIENT_CONFIG_MAP errors
+    const hasDemoClientConfigError = (errors: string[]) =>
+      errors.some((e) => e.includes('demo') && e.includes('TEST_CLIENT_CONFIG_MAP'));
+
+    // Exempt → no error.
     expect(
-      result.errors.filter((e) => e.includes('acme') && e.includes('TEST_CLIENT_CONFIG_MAP'))
-    ).toEqual([]);
+      hasDemoClientConfigError(validateImportMap({ ...base, fixtureClients: ['demo'] }).errors)
+    ).toBe(false);
+    // Not exempt → error is produced, proving the exemption is what suppresses it.
     expect(
-      result.errors.filter((e) => e.includes('demo') && e.includes('TEST_CLIENT_CONFIG_MAP'))
-    ).toEqual([]);
+      hasDemoClientConfigError(validateImportMap({ ...base, fixtureClients: [] }).errors)
+    ).toBe(true);
   });
 
   it('PROD map clients exist in TEST maps', () => {
@@ -119,5 +129,93 @@ describe('Import Map Validation (Item 7)', () => {
     const result = validateImportMap(registry);
     // No errors about PROD maps missing from TEST maps
     expect(result.errors.filter((e) => e.includes('PROD_'))).toEqual([]);
+  });
+});
+
+describe('Production Import Map Coverage', () => {
+  // Regression guard for the ?client=acme bug: a client listed in a production-mode
+  // registry but absent from the PROD import maps is selectable yet unloadable at
+  // runtime. Both prod and the GitHub Pages demo build in production mode, so every
+  // client in either must resolve in the PROD maps — not the TEST maps.
+  it.each(['clients.prod.json', 'clients.demo.json'])(
+    'every client in %s resolves in the PROD import maps',
+    (file) => {
+      const registry: ClientRegistry = JSON.parse(
+        readFileSync(join(__dirname, '..', 'config', file), 'utf-8')
+      );
+      expect(validateProdImportMap(registry).errors).toEqual([]);
+    }
+  );
+
+  it('flags a prod-registry client missing from the PROD import maps', () => {
+    const fakeRegistry: ClientRegistry = {
+      clients: ['usg', 'ghost'],
+      configPath: 'config/',
+      clientConfigPath: 'config/',
+    };
+    const result = validateProdImportMap(fakeRegistry);
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.includes('ghost'))).toBe(true);
+    expect(result.errors.some((e) => e.includes('PROD_CONFIG_IMPORT_MAP'))).toBe(true);
+  });
+
+  it('does not treat an inherited Object property name as covered', () => {
+    // Presence is checked with Object.hasOwn, so a client named after a
+    // prototype member must NOT be silently considered present.
+    const fakeRegistry: ClientRegistry = {
+      clients: ['constructor', 'toString', '__proto__'],
+      configPath: 'config/',
+      clientConfigPath: 'config/',
+    };
+    const result = validateProdImportMap(fakeRegistry);
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.includes('constructor'))).toBe(true);
+    expect(result.errors.some((e) => e.includes('toString'))).toBe(true);
+    expect(result.errors.some((e) => e.includes('__proto__'))).toBe(true);
+  });
+
+  it('flags a defaultClient that is not a member of the clients array', () => {
+    const fakeRegistry: ClientRegistry = {
+      clients: ['usg', 'oddessentials', 'acme'],
+      configPath: 'config/',
+      clientConfigPath: 'config/',
+      defaultClient: 'nonexistent',
+    };
+    const result = validateProdImportMap(fakeRegistry);
+    expect(result.valid).toBe(false);
+    expect(
+      result.errors.some((e) => e.includes('defaultClient') && e.includes('nonexistent'))
+    ).toBe(true);
+  });
+
+  it('accepts a defaultClient that is a member of the clients array', () => {
+    const fakeRegistry: ClientRegistry = {
+      clients: ['usg', 'oddessentials', 'acme'],
+      configPath: 'config/',
+      clientConfigPath: 'config/',
+      defaultClient: 'usg',
+    };
+    expect(validateProdImportMap(fakeRegistry).errors).toEqual([]);
+  });
+
+  it('the real demo registry (which sets defaultClient) passes the defaultClient check', () => {
+    const registry: ClientRegistry = JSON.parse(
+      readFileSync(join(__dirname, '..', 'config', 'clients.demo.json'), 'utf-8')
+    );
+    const result = validateProdImportMap(registry);
+    expect(result.errors.filter((e) => e.includes('defaultClient'))).toEqual([]);
+  });
+});
+
+describe('getAvailableClients fixture exclusion', () => {
+  // Fixture clients (demo) are intentionally not wired into the client-config
+  // import maps, so they must not be offered as selectable ?client= values —
+  // otherwise selecting them throws at runtime (the ?client=demo bug).
+  it('excludes fixture clients (demo) but keeps fully-wired clients (acme)', async () => {
+    const available = await getAvailableClients();
+    expect(available).toContain('oddessentials');
+    expect(available).toContain('usg');
+    expect(available).toContain('acme');
+    expect(available).not.toContain('demo');
   });
 });

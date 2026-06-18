@@ -13,7 +13,7 @@ Runtime lat/lon projection shipped in `014-runtime-lat-lon-projection`. All conf
 - **Retire legacy scripts:** `scripts/recapture-coordinates.ts`, `scripts/analyze-svg-projection.ts`, and `scripts/project-coordinates.ts` are no longer needed for v2 configs. Keep for reference or archive.
 - **Remove `mapAssetHash`:** Still present in v2 schema for SVG integrity checking. Could be removed once region boundaries move to GeoJSON.
 - **Replace `svgPathId` with GeoJSON regions:** Regions still reference SVG `<path>` element IDs. A future iteration could use GeoJSON polygons for region boundaries, fully decoupling from the SVG.
-- **Remove `coordinate-validation.ts`:** Standalone utility that validates svgX/svgY fields. No longer imported by any source file.
+- **`coordinate-validation.ts` (do not remove yet):** Standalone utility that validates svgX/svgY fields. Still imported by `tools/coordinate-capture.html` (`validateCoordinate`, `validateCaptureSession`, `formatValidationResults`); remove only after that tool is retired or migrated off it. (A previous note here incorrectly claimed it was unused.)
 
 ---
 
@@ -47,7 +47,7 @@ Add structured error tracking hooks for production observability. The app alread
 
 ### 4. E2E Testing
 
-Add Playwright tests covering the critical user paths: page load, region click, office drill-down, map mode switching, and client switching via URL parameter. Current coverage is 456 unit tests across 31 suites — E2E would validate the full integration.
+Add Playwright tests covering the critical user paths: page load, region click, office drill-down, map mode switching, and client switching via URL parameter. Current coverage is 742 unit tests across 46 suites — E2E would validate the full integration.
 
 **Files:** `e2e/` (new directory), `playwright.config.ts` (new)
 

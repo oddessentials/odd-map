@@ -434,8 +434,10 @@ describe('T044: Quickstart Validation', () => {
     }
   });
 
-  it('existing acme and demo fixtures are in registry but need no client config import map entry', () => {
-    // acme and demo are in the registry for future use but don't need import map entries yet
+  it('acme and demo remain registered (acme fully wired, demo a fixture)', () => {
+    // acme is now wired into the client-config import maps and is user-selectable;
+    // demo remains a projection/test fixture with no client-config entry and is
+    // excluded from getAvailableClients. Both stay listed in the test registry.
     const registry = JSON.parse(
       readFileSync(join(__dirname, '..', 'config', 'clients.test.json'), 'utf-8')
     );
