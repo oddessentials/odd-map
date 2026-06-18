@@ -92,14 +92,16 @@ export async function getConfigForClient(clientId: string): Promise<MapConfig> {
   // Select import map based on environment - Vite eliminates unused branch at build time
   const importMap = import.meta.env.PROD ? PROD_CONFIG_IMPORT_MAP : TEST_CONFIG_IMPORT_MAP;
 
-  const importFn = importMap[clientId];
-  if (!importFn) {
+  // Object.hasOwn (not truthiness) so a client named after an inherited property
+  // (e.g. "constructor") is treated as absent rather than matching a prototype member.
+  if (!Object.hasOwn(importMap, clientId)) {
     throw new Error(
       `Client "${clientId}" is in registry but not in import map. ` +
         `This is a configuration error—add the client to the appropriate import map.`
     );
   }
 
+  const importFn = importMap[clientId];
   const configModule = (await importFn()) as { default?: MapConfig } & MapConfig;
   return (configModule.default ?? configModule) as MapConfig;
 }
@@ -121,14 +123,16 @@ export async function getClientConfigForClient(clientId: string): Promise<unknow
 
   const importMap = import.meta.env.PROD ? PROD_CLIENT_CONFIG_MAP : TEST_CLIENT_CONFIG_MAP;
 
-  const importFn = importMap[clientId];
-  if (!importFn) {
+  // Object.hasOwn (not truthiness) so a client named after an inherited property
+  // is treated as absent rather than matching a prototype member.
+  if (!Object.hasOwn(importMap, clientId)) {
     throw new Error(
       `Client "${clientId}" is in registry but not in client config import map. ` +
         `This is a configuration error—add the client to the appropriate client config import map.`
     );
   }
 
+  const importFn = importMap[clientId];
   const configModule = (await importFn()) as { default?: unknown };
   return configModule.default ?? configModule;
 }
