@@ -15,10 +15,13 @@ export interface ClientRegistry {
   defaultClient?: string;
 }
 
-// Production-only import map - Vite eliminates test configs in prod builds
+// Production-only import map - Vite eliminates test configs in prod builds.
+// `acme` is the Google Maps showcase client; it ships in production/demo builds
+// because it is listed in clients.prod.json and clients.demo.json.
 const PROD_CONFIG_IMPORT_MAP: Record<string, () => Promise<unknown>> = {
   usg: () => import('../../config/usg-map-config.json'),
   oddessentials: () => import('../../config/oddessentials-map-config.json'),
+  acme: () => import('../../config/acme-map-config.json'),
 };
 
 // Test import map - includes all clients including fixtures
@@ -33,12 +36,14 @@ const TEST_CONFIG_IMPORT_MAP: Record<string, () => Promise<unknown>> = {
 const PROD_CLIENT_CONFIG_MAP: Record<string, () => Promise<unknown>> = {
   usg: () => import('../../config/usg-client.json'),
   oddessentials: () => import('../../config/oddessentials-client.json'),
+  acme: () => import('../../config/acme-client.json'),
 };
 
 // Test client config import map
 const TEST_CLIENT_CONFIG_MAP: Record<string, () => Promise<unknown>> = {
   usg: () => import('../../config/usg-client.json'),
   oddessentials: () => import('../../config/oddessentials-client.json'),
+  acme: () => import('../../config/acme-client.json'),
 };
 
 let cachedRegistry: ClientRegistry | null = null;
@@ -129,6 +134,27 @@ export async function getClientConfigForClient(clientId: string): Promise<unknow
 }
 
 /**
+ * Push a coverage error for each client in `clients` that has no OWN entry in
+ * `map`. Clients listed in `skip` (e.g. fixture clients that legitimately have
+ * no client config) are exempt. Uses Object.hasOwn so a client named after an
+ * inherited Object property (e.g. "constructor", "toString") is correctly
+ * treated as absent rather than matching a prototype member.
+ */
+function checkClientCoverage(
+  clients: readonly string[],
+  map: Record<string, unknown>,
+  mapName: string,
+  errors: string[],
+  skip: readonly string[] = []
+): void {
+  for (const clientId of clients) {
+    if (!Object.hasOwn(map, clientId) && !skip.includes(clientId)) {
+      errors.push(`Client "${clientId}" in registry but missing from ${mapName}`);
+    }
+  }
+}
+
+/**
  * Verify all clients in registry have import map entries
  * Used by verification scripts to catch config/import-map drift
  */
@@ -137,29 +163,29 @@ export function validateImportMap(registry: ClientRegistry): {
   errors: string[];
 } {
   const errors: string[] = [];
+  const fixtureClients = registry.fixtureClients ?? [];
 
-  registry.clients.forEach((clientId) => {
-    // Test map config
-    if (!TEST_CONFIG_IMPORT_MAP[clientId]) {
-      errors.push(`Client "${clientId}" in registry but missing from TEST_CONFIG_IMPORT_MAP`);
-    }
-    // Test client config (only for clients that have client configs, not fixture-only clients)
-    const fixtureClients = registry.fixtureClients ?? [];
-    if (!TEST_CLIENT_CONFIG_MAP[clientId] && !fixtureClients.includes(clientId)) {
-      errors.push(`Client "${clientId}" in registry but missing from TEST_CLIENT_CONFIG_MAP`);
-    }
-  });
+  // Every registry client must resolve in the TEST map-config map...
+  checkClientCoverage(registry.clients, TEST_CONFIG_IMPORT_MAP, 'TEST_CONFIG_IMPORT_MAP', errors);
+  // ...and in the TEST client-config map, except fixture-only clients that have no client config.
+  checkClientCoverage(
+    registry.clients,
+    TEST_CLIENT_CONFIG_MAP,
+    'TEST_CLIENT_CONFIG_MAP',
+    errors,
+    fixtureClients
+  );
 
-  // Verify PROD maps are subsets of TEST maps
+  // Verify PROD maps are subsets of TEST maps (keys here are own map keys, never prototype names).
   for (const clientId of Object.keys(PROD_CONFIG_IMPORT_MAP)) {
-    if (!TEST_CONFIG_IMPORT_MAP[clientId]) {
+    if (!Object.hasOwn(TEST_CONFIG_IMPORT_MAP, clientId)) {
       errors.push(
         `Client "${clientId}" in PROD_CONFIG_IMPORT_MAP but missing from TEST_CONFIG_IMPORT_MAP`
       );
     }
   }
   for (const clientId of Object.keys(PROD_CLIENT_CONFIG_MAP)) {
-    if (!TEST_CLIENT_CONFIG_MAP[clientId]) {
+    if (!Object.hasOwn(TEST_CLIENT_CONFIG_MAP, clientId)) {
       errors.push(
         `Client "${clientId}" in PROD_CLIENT_CONFIG_MAP but missing from TEST_CLIENT_CONFIG_MAP`
       );
@@ -170,11 +196,49 @@ export function validateImportMap(registry: ClientRegistry): {
 }
 
 /**
- * Get all available client IDs in the active registry
+ * Verify that every client in a registry resolves in the PRODUCTION import maps.
+ *
+ * Production builds — including the GitHub Pages demo, which builds in production
+ * mode (`import.meta.env.PROD === true`) — only load clients present in the PROD
+ * import maps. A client listed in such a registry but absent from these maps is
+ * selectable in the UI yet unloadable, erroring at runtime ("in registry but not
+ * in import map"). Run this against any registry consumed by a production build
+ * (clients.prod.json and clients.demo.json) to catch that drift before release.
+ */
+export function validateProdImportMap(registry: ClientRegistry): {
+  valid: boolean;
+  errors: string[];
+} {
+  const errors: string[] = [];
+
+  checkClientCoverage(registry.clients, PROD_CONFIG_IMPORT_MAP, 'PROD_CONFIG_IMPORT_MAP', errors);
+  checkClientCoverage(registry.clients, PROD_CLIENT_CONFIG_MAP, 'PROD_CLIENT_CONFIG_MAP', errors);
+
+  // The default client must itself be a member of the registry. Otherwise the
+  // default landing (no ?client=) resolves via getDefaultClient() to an id that
+  // getConfigForClient rejects as "not found in registry" at runtime — a green
+  // CI but a broken home page on the production/demo build.
+  if (registry.defaultClient !== undefined && !registry.clients.includes(registry.defaultClient)) {
+    errors.push(
+      `defaultClient "${registry.defaultClient}" is not a member of the registry's clients array`
+    );
+  }
+
+  return { valid: errors.length === 0, errors };
+}
+
+/**
+ * Get the user-selectable client IDs in the active registry.
+ *
+ * Fixture clients (used only as test/projection fixtures, e.g. `demo`) are
+ * excluded: they are intentionally not wired into the client-config import maps,
+ * so offering them via `?client=` would fail to load. They remain in
+ * `registry.clients` so tests can still load them directly via getConfigForClient.
  */
 export async function getAvailableClients(): Promise<string[]> {
   const registry = await getClientRegistry();
-  return [...registry.clients];
+  const fixtureClients = registry.fixtureClients ?? [];
+  return registry.clients.filter((clientId) => !fixtureClients.includes(clientId));
 }
 
 /**

@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { MapConfigSchema } from '../src/lib/map-config.schema.js';
-import { validateImportMap } from '../src/lib/client-registry.js';
+import { validateImportMap, validateProdImportMap } from '../src/lib/client-registry.js';
 import type { ClientRegistry } from '../src/lib/client-registry.js';
 
 /**
@@ -50,6 +50,9 @@ console.log(`Found ${configFiles.length} config file(s):\n`);
 // Load registries
 const prodRegistry: ClientRegistry = JSON.parse(
   fs.readFileSync(path.join(configDir, 'clients.prod.json'), 'utf8')
+);
+const demoRegistry: ClientRegistry = JSON.parse(
+  fs.readFileSync(path.join(configDir, 'clients.demo.json'), 'utf8')
 );
 const testRegistry: ClientRegistry = JSON.parse(
   fs.readFileSync(path.join(configDir, 'clients.test.json'), 'utf8')
@@ -160,6 +163,22 @@ if (!importMapValidation.valid) {
   console.error('');
 }
 
+// Validate PRODUCTION import map coverage for every registry consumed by a
+// production build: real production (clients.prod.json) and the GitHub Pages
+// demo (clients.demo.json), which also builds in production mode. A client
+// listed in either but missing from the PROD maps is selectable yet unloadable.
+const prodCoverageErrors = [
+  { name: 'production', registry: prodRegistry },
+  { name: 'demo', registry: demoRegistry },
+].flatMap(({ name, registry }) =>
+  validateProdImportMap(registry).errors.map((err) => `[${name}] ${err}`)
+);
+if (prodCoverageErrors.length > 0) {
+  console.error('❌ Production import map coverage failed:');
+  prodCoverageErrors.forEach((err) => console.error(`   - ${err}`));
+  console.error('');
+}
+
 // Print results
 results.forEach((result) => {
   const symbol = result.status === 'passed' ? '✅' : result.status === 'warning' ? '⚠️ ' : '❌';
@@ -197,7 +216,7 @@ console.log('='.repeat(60));
 console.log(`Summary: ${passedCount} passed, ${warningCount} warnings, ${failedCount} failed`);
 console.log('='.repeat(60) + '\n');
 
-if (failedCount > 0 || !importMapValidation.valid) {
+if (failedCount > 0 || !importMapValidation.valid || prodCoverageErrors.length > 0) {
   console.error('❌ Config validation FAILED');
   process.exit(1);
 }
