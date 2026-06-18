@@ -125,6 +125,9 @@ configFiles.forEach((file) => {
     if (prodRegistry.clients.includes(validatedConfig.clientId)) {
       registries.push('production');
     }
+    if (demoRegistry.clients.includes(validatedConfig.clientId)) {
+      registries.push('demo');
+    }
     if (testRegistry.clients.includes(validatedConfig.clientId)) {
       registries.push('test');
     }
