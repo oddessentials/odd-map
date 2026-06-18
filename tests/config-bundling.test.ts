@@ -99,21 +99,27 @@ describe('Import Map Validation (Item 7)', () => {
     expect(result.errors.some((e) => e.includes('TEST_CONFIG_IMPORT_MAP'))).toBe(true);
   });
 
-  it('data-driven fixture clients skip client config validation', () => {
-    const fakeRegistry: ClientRegistry = {
-      clients: ['usg', 'acme', 'demo'],
+  it('fixtureClients exempts a client that has no client-config map entry', () => {
+    // `demo` is intentionally absent from TEST_CLIENT_CONFIG_MAP; the fixtureClients
+    // exemption is the load-bearing reason it produces no error. Positive + negative
+    // control (`acme` is now in the map and would pass either way, so it can't prove
+    // the exemption works — `demo` can).
+    const base: ClientRegistry = {
+      clients: ['usg', 'demo'],
       configPath: 'config/',
       clientConfigPath: 'config/',
-      fixtureClients: ['acme', 'demo'],
     };
-    const result = validateImportMap(fakeRegistry);
-    // acme/demo should not produce TEST_CLIENT_CONFIG_MAP errors
+    const hasDemoClientConfigError = (errors: string[]) =>
+      errors.some((e) => e.includes('demo') && e.includes('TEST_CLIENT_CONFIG_MAP'));
+
+    // Exempt → no error.
     expect(
-      result.errors.filter((e) => e.includes('acme') && e.includes('TEST_CLIENT_CONFIG_MAP'))
-    ).toEqual([]);
+      hasDemoClientConfigError(validateImportMap({ ...base, fixtureClients: ['demo'] }).errors)
+    ).toBe(false);
+    // Not exempt → error is produced, proving the exemption is what suppresses it.
     expect(
-      result.errors.filter((e) => e.includes('demo') && e.includes('TEST_CLIENT_CONFIG_MAP'))
-    ).toEqual([]);
+      hasDemoClientConfigError(validateImportMap({ ...base, fixtureClients: [] }).errors)
+    ).toBe(true);
   });
 
   it('PROD map clients exist in TEST maps', () => {
@@ -127,28 +133,19 @@ describe('Import Map Validation (Item 7)', () => {
 });
 
 describe('Production Import Map Coverage', () => {
-  // Regression guard: clients listed in a production-mode registry but absent
-  // from the PROD import maps are selectable yet unloadable at runtime
-  // (the ?client=acme bug). Every such client must resolve in the PROD maps.
-  it('every client in the prod registry resolves in the PROD import maps', () => {
-    const registry: ClientRegistry = JSON.parse(
-      readFileSync(join(__dirname, '..', 'config', 'clients.prod.json'), 'utf-8')
-    );
-    const result = validateProdImportMap(registry);
-    expect(result.errors).toEqual([]);
-    expect(result.valid).toBe(true);
-  });
-
-  it('every client in the demo registry resolves in the PROD import maps', () => {
-    // The GitHub Pages demo builds in production mode, so it loads clients
-    // through the PROD import maps — not the TEST maps.
-    const registry: ClientRegistry = JSON.parse(
-      readFileSync(join(__dirname, '..', 'config', 'clients.demo.json'), 'utf-8')
-    );
-    const result = validateProdImportMap(registry);
-    expect(result.errors).toEqual([]);
-    expect(result.valid).toBe(true);
-  });
+  // Regression guard for the ?client=acme bug: a client listed in a production-mode
+  // registry but absent from the PROD import maps is selectable yet unloadable at
+  // runtime. Both prod and the GitHub Pages demo build in production mode, so every
+  // client in either must resolve in the PROD maps — not the TEST maps.
+  it.each(['clients.prod.json', 'clients.demo.json'])(
+    'every client in %s resolves in the PROD import maps',
+    (file) => {
+      const registry: ClientRegistry = JSON.parse(
+        readFileSync(join(__dirname, '..', 'config', file), 'utf-8')
+      );
+      expect(validateProdImportMap(registry).errors).toEqual([]);
+    }
+  );
 
   it('flags a prod-registry client missing from the PROD import maps', () => {
     const fakeRegistry: ClientRegistry = {
@@ -198,9 +195,7 @@ describe('Production Import Map Coverage', () => {
       clientConfigPath: 'config/',
       defaultClient: 'usg',
     };
-    const result = validateProdImportMap(fakeRegistry);
-    expect(result.errors).toEqual([]);
-    expect(result.valid).toBe(true);
+    expect(validateProdImportMap(fakeRegistry).errors).toEqual([]);
   });
 
   it('the real demo registry (which sets defaultClient) passes the defaultClient check', () => {
