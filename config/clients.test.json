@@ -1,6 +1,5 @@
 {
-  "clients": ["oddessentials", "usg", "acme", "demo"],
-  "fixtureClients": ["demo"],
+  "clients": ["oddessentials", "usg", "acme"],
   "configPath": "config/{clientId}-map-config.json",
   "clientConfigPath": "config/{clientId}-client.json"
 }

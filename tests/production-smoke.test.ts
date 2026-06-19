@@ -1,33 +1,29 @@
-import { describe, it, expect } from 'vitest';
-import { initProjection } from '../src/lib/projection.js';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { loadClientConfig, getClientOffices, __resetConfig } from '../src/lib/client-config.js';
 
 /**
  * Production Smoke Test
  *
- * This test verifies the most basic production scenario:
- * - Can we initialize the projection system?
- * - Can we build without errors?
- * - Does the app not get stuck on loading screen?
- *
- * This catches the race condition where MapSvg.init() wasn't awaited.
+ * Verifies the most basic production scenario: the default client config
+ * loads, validates, and exposes the office coordinates the tile map needs.
+ * If this fails, the app would be stuck on the loading screen.
  */
 describe('Production Smoke Test', () => {
-  it('initializes projection system without errors', async () => {
-    // This is the most basic thing that MUST work in production
-    // If this fails, the app is stuck on loading screen
-    await expect(initProjection('usg')).resolves.not.toThrow();
+  beforeEach(() => {
+    __resetConfig();
   });
 
-  it(
-    'loading screen hides after init completes',
-    { timeout: 5000 }, // 5 second timeout - if init hangs, this fails
-    async () => {
-      // Simulate what app.ts does
-      await initProjection('usg');
+  it('loads and validates the usg client config without errors', async () => {
+    await expect(loadClientConfig('usg')).resolves.toBeDefined();
+  });
 
-      // If we get here without timeout, initialization completed
-      // In the real app, this means loading screen will hide
-      expect(true).toBe(true);
+  it('exposes offices with numeric lat/lon for the tile map', async () => {
+    await loadClientConfig('usg');
+    const offices = getClientOffices();
+    expect(offices.length).toBeGreaterThan(0);
+    for (const office of offices) {
+      expect(office.coordinates.lat).toBeTypeOf('number');
+      expect(office.coordinates.lon).toBeTypeOf('number');
     }
-  );
+  });
 });

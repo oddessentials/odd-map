@@ -1,15 +1,15 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { MapConfigSchema } from '../src/lib/map-config.schema.js';
+import { ClientConfigSchema, formatValidationErrors } from '../src/lib/client-config.schema.js';
 import { validateImportMap, validateProdImportMap } from '../src/lib/client-registry.js';
 import type { ClientRegistry } from '../src/lib/client-registry.js';
 
 /**
  * Config File Validation Script
  *
- * Validates all client configs for:
+ * Validates all client configs (`*-client.json`) for:
  * - JSON parse-ability
- * - Zod schema compliance
+ * - Zod schema compliance (ClientConfigSchema)
  * - Filename → clientId consistency
  * - Registry membership
  * - Import map coverage
@@ -22,8 +22,8 @@ interface ValidationResult {
   errors: string[];
   warnings: string[];
   metadata?: {
-    version: number;
-    coordinates: number;
+    schemaVersion: number;
+    offices: number;
     registries: string[];
   };
 }
@@ -34,18 +34,18 @@ const results: ValidationResult[] = [];
 console.log('📋 Config File Validation\n');
 console.log('='.repeat(60) + '\n');
 
-// Find all map config files (exclude registry files)
+// Find all client config files (exclude registry files)
 const configFiles = fs
   .readdirSync(configDir)
-  .filter((file) => file.endsWith('-map-config.json'))
+  .filter((file) => file.endsWith('-client.json'))
   .sort();
 
 if (configFiles.length === 0) {
-  console.error('❌ No config files found in', configDir);
+  console.error('❌ No client config files found in', configDir);
   process.exit(1);
 }
 
-console.log(`Found ${configFiles.length} config file(s):\n`);
+console.log(`Found ${configFiles.length} client config file(s):\n`);
 
 // Load registries
 const prodRegistry: ClientRegistry = JSON.parse(
@@ -82,34 +82,21 @@ configFiles.forEach((file) => {
       return;
     }
 
-    // 2. Extract clientId from filename
-    const expectedClientId = file.replace('-map-config.json', '');
+    // 2. Extract expected clientId from filename
+    const expectedClientId = file.replace('-client.json', '');
 
     // 3. Validate with Zod schema
-    let validatedConfig;
-    try {
-      validatedConfig = MapConfigSchema.parse(configRaw);
-      result.clientId = validatedConfig.clientId;
-    } catch (err) {
+    const parsed = ClientConfigSchema.safeParse(configRaw);
+    if (!parsed.success) {
       result.status = 'failed';
-      result.clientId = configRaw.clientId || expectedClientId;
-
-      if (
-        err &&
-        typeof err === 'object' &&
-        'errors' in err &&
-        Array.isArray((err as { errors: unknown[] }).errors)
-      ) {
-        (err as { errors: Array<{ path: string[]; message: string }> }).errors.forEach((e) => {
-          const path = e.path.join('.');
-          result.errors.push(`Schema error at $.${path}: ${e.message}`);
-        });
-      } else {
-        result.errors.push(`Schema validation failed: ${err.message}`);
-      }
+      result.clientId = (configRaw.clientId as string) || expectedClientId;
+      formatValidationErrors(parsed.error).forEach((msg) => result.errors.push(msg));
       results.push(result);
       return;
     }
+
+    const validatedConfig = parsed.data;
+    result.clientId = validatedConfig.clientId;
 
     // 4. filename → clientId consistency
     if (validatedConfig.clientId !== expectedClientId) {
@@ -139,8 +126,8 @@ configFiles.forEach((file) => {
 
     // 6. Store metadata
     result.metadata = {
-      version: validatedConfig.configVersion,
-      coordinates: validatedConfig.coordinates.length,
+      schemaVersion: validatedConfig.schemaVersion,
+      offices: validatedConfig.offices.length,
       registries,
     };
 
@@ -190,7 +177,7 @@ results.forEach((result) => {
 
   if (result.metadata) {
     console.log(
-      `   Client: ${result.clientId}, Version: ${result.metadata.version}, Coordinates: ${result.metadata.coordinates}`
+      `   Client: ${result.clientId}, Schema: v${result.metadata.schemaVersion}, Offices: ${result.metadata.offices}`
     );
     if (result.metadata.registries.length > 0) {
       console.log(`   Registry: ${result.metadata.registries.join(', ')}`);

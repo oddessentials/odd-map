@@ -3,7 +3,7 @@
  *
  * Main application controller with state machine.
  * States: USA_VIEW → REGION_VIEW → LOCATION_VIEW
- * Supports both 2D SVG and 3D WebGL rendering.
+ * Renders the interactive tile map (MapLibre / Apple / Google).
  *
  * At startup, loads the client configuration from JSON, then injects
  * branding (DOM text) and theme (CSS custom properties) before
@@ -11,11 +11,7 @@
  */
 
 import type { Region, Office, OfficeWithRegion } from './types/index.js';
-import type { MarkerVisualState } from './lib/marker-state.js';
-import { MapSvg } from './components/map-svg.js';
-import { Map3D } from './components/map-3d.js';
 import { TileMap } from './components/tile-map.js';
-import type { TileMapInitialView } from './components/tile-map.js';
 import { DetailsPanel } from './components/details-panel.js';
 import { SpecialtyDivisionsPanel } from './components/specialty-divisions.js';
 import { RegionList } from './components/region-list.js';
@@ -41,27 +37,14 @@ const States = {
 
 type StateValue = (typeof States)[keyof typeof States];
 
-// Map interface for polymorphism between 2D and 3D
-interface MapComponent {
-  selectRegion(regionName: string): void;
-  selectOffice(office: Office | OfficeWithRegion): void;
-  reset(): void;
-  updateMarkerStates?(states: MarkerVisualState[]): void;
-  dispose?(): void;
-}
-
-type MapMode = '2d' | '3d' | 'tile';
-
 class App {
   private state: StateValue = States.USA_VIEW;
   private selectedRegion: Region | null = null;
   private selectedOffice: Office | null = null;
-  private mapMode: MapMode;
-  private transitioning: boolean = false;
   private resetting: boolean = false;
 
   // Component instances
-  private map: MapComponent | null = null;
+  private map: TileMap | null = null;
   private panel: DetailsPanel | null = null;
   private regionList: RegionList | null = null;
   // @ts-expect-error - initialized but read access not needed
@@ -74,8 +57,6 @@ class App {
   private specialtyContainer: HTMLElement | null;
   private resetBtn: HTMLElement | null;
   private stateIndicator: HTMLElement | null;
-  private modeSelector: HTMLElement | null;
-  private spinBtn: HTMLElement | null;
   private tileStyleBtn: HTMLElement | null;
   private tileStyle: 'light' | 'dark' = 'light';
   private collapseLeftBtn: HTMLElement | null;
@@ -89,9 +70,6 @@ class App {
   private boundCollapseRight: (() => void) | null = null;
 
   constructor() {
-    // Rendering mode: default to Tile
-    this.mapMode = 'tile';
-
     // DOM elements
     this.mapContainer = document.getElementById('map-container');
     this.panelContainer = document.getElementById('details-panel');
@@ -99,8 +77,6 @@ class App {
     this.specialtyContainer = document.getElementById('specialty-divisions');
     this.resetBtn = document.getElementById('reset-btn');
     this.stateIndicator = document.getElementById('state-indicator');
-    this.modeSelector = document.querySelector('.mode-selector');
-    this.spinBtn = document.getElementById('spin-toggle');
     this.tileStyleBtn = document.getElementById('tile-style-toggle');
     this.collapseLeftBtn = document.getElementById('collapse-left');
     this.collapseRightBtn = document.getElementById('collapse-right');
@@ -180,33 +156,13 @@ class App {
       return;
     }
 
-    // Initialize map based on WebGL availability and user preference
+    // Initialize the tile map
     await this.initMap(); // CRITICAL: Must wait for map to fully initialize
 
-    // Mode selector (2D / 3D / Map)
-    if (this.modeSelector) {
-      this.modeSelector.addEventListener('click', (e) => {
-        const btn = (e.target as HTMLElement).closest('.mode-btn') as HTMLElement | null;
-        if (!btn) return;
-        const mode = btn.dataset.mode as MapMode | undefined;
-        if (mode && mode !== this.mapMode) {
-          this.switchMapMode(mode);
-        }
-      });
-      this.updateModeSelector();
-    }
-
-    // Spin toggle button (3D mode only)
-    if (this.spinBtn) {
-      this.spinBtn.addEventListener('click', () => this.handleSpinToggle());
-    }
-    this.updateSpinButtonVisibility();
-
-    // Tile style toggle (Tile mode only)
+    // Tile style toggle (light / dark)
     if (this.tileStyleBtn) {
       this.tileStyleBtn.addEventListener('click', () => this.handleTileStyleToggle());
     }
-    this.updateTileStyleButtonVisibility();
     this.updateTileStyleButton();
 
     // Sidebar collapse toggles (desktop only)
@@ -263,10 +219,10 @@ class App {
     this.updateUI();
   }
 
-  private async initMap(tileInitialView?: TileMapInitialView): Promise<void> {
+  private async initMap(): Promise<void> {
     if (!this.mapContainer) return;
 
-    // Dispose existing map if switching
+    // Dispose existing map if re-initializing
     if (this.map?.dispose) {
       this.map.dispose();
     }
@@ -278,189 +234,38 @@ class App {
       onReset: () => this.handleReset(),
     };
 
-    if (this.mapMode === '3d') {
-      try {
-        this.map = new Map3D(this.mapContainer, mapOptions);
-        // Map3D auto-initializes in constructor, no init() needed
-        document.body.dataset.mapMode = '3d';
-      } catch (e) {
-        console.warn('3D map failed, falling back to 2D:', e);
-        this.mapMode = '2d';
-        const map2d = new MapSvg(this.mapContainer, mapOptions);
-        await map2d.init(); // CRITICAL: Must await
-        this.map = map2d;
-        document.body.dataset.mapMode = '2d';
-      }
-    } else if (this.mapMode === 'tile') {
-      try {
-        const tileMap = new TileMap(this.mapContainer, mapOptions);
-        await tileMap.init(tileInitialView);
-        this.map = tileMap;
-        document.body.dataset.mapMode = 'tile';
-      } catch (e) {
-        console.warn('Tile map failed, falling back to 2D:', e);
-        this.mapMode = '2d';
-        const map2d = new MapSvg(this.mapContainer, mapOptions);
-        await map2d.init();
-        this.map = map2d;
-        document.body.dataset.mapMode = '2d';
-      }
-    } else {
-      const map2d = new MapSvg(this.mapContainer, mapOptions);
-      await map2d.init(); // CRITICAL: Must await initialization
-      this.map = map2d;
-      document.body.dataset.mapMode = '2d';
-    }
-  }
-
-  private lastToggleTime: number = 0;
-  // Debounce window for toggle button - prevents double-click issues
-  // Set slightly longer than typical double-click interval (300-500ms)
-  private static readonly TOGGLE_DEBOUNCE_MS = 500;
-
-  private async switchMapMode(mode: MapMode): Promise<void> {
-    // Guard against re-entry during transition
-    if (this.transitioning) return;
-    if (mode === this.mapMode) return;
-
-    // Debounce: prevent rapid successive switches (e.g., double-click)
-    // Uses performance.now() for monotonic timing unaffected by system clock
-    const now = performance.now();
-    if (now - this.lastToggleTime < App.TOGGLE_DEBOUNCE_MS) return;
-    this.lastToggleTime = now;
-
-    this.transitioning = true;
-    this.setModeButtonsEnabled(false);
-
     try {
-      // Capture stable identifiers BEFORE disposing map
-      // Using strings/codes instead of object references for stability
-      const wasRegionName = this.selectedRegion?.name ?? null;
-      const wasOfficeCode = this.selectedOffice?.officeCode ?? null;
-      const wasOffice = this.selectedOffice; // Keep for panel restoration
-      const wasRegion = this.selectedRegion; // Keep for panel restoration
-
-      // For tile mode: compute initialView so init() can jump directly to the
-      // restored location instead of racing fitBounds vs flyTo animations.
-      let tileInitialView: TileMapInitialView | undefined;
-      if (mode === 'tile') {
-        if (wasOffice?.coordinates) {
-          tileInitialView = {
-            lat: wasOffice.coordinates.lat,
-            lon: wasOffice.coordinates.lon,
-            zoom: 12,
-          };
-        } else if (wasRegionName) {
-          // Region restore: compute centroid from region offices
-          const regionOffices = getClientOffices().filter(
-            (o) => 'regionName' in o && o.regionName === wasRegionName
-          );
-          if (regionOffices.length > 0) {
-            const avgLat =
-              regionOffices.reduce((sum, o) => sum + o.coordinates.lat, 0) / regionOffices.length;
-            const avgLon =
-              regionOffices.reduce((sum, o) => sum + o.coordinates.lon, 0) / regionOffices.length;
-            tileInitialView = { lat: avgLat, lon: avgLon, zoom: 6 };
-          }
-        }
-      }
-
-      this.mapMode = mode;
-      await this.initMap(tileInitialView); // CRITICAL: Must await full initialization
-      this.updateModeSelector();
-      this.updateSpinButtonVisibility();
-      this.updateTileStyleButtonVisibility();
-      this.updateSpinButton(); // Reset visual state (autoRotate defaults to false)
-      this.updateTileStyleButton(); // Sync toggle button visual state
-
-      // Restore tile style preference when switching back to tile mode.
-      // Always apply — user's toggle may differ from the config default.
-      if (mode === 'tile' && this.map && typeof (this.map as TileMap).setTileStyle === 'function') {
-        (this.map as TileMap).setTileStyle(this.tileStyle);
-      }
-
-      // Restore selection state AFTER map is fully initialized
-      // This ensures marker visibility logic is properly triggered
-      if (wasOfficeCode && wasOffice && wasRegion && this.map) {
-        const officeWithRegion = ensureOfficeWithRegion(wasOffice, wasRegion.name);
-
-        this.map.selectOffice(officeWithRegion);
-        // Use consistent object for panel to avoid state divergence
-        this.panel?.showOffice(officeWithRegion, wasRegion);
-      } else if (wasRegionName && wasRegion && this.map) {
-        // Use region name (stable identifier) to restore selection
-        this.map.selectRegion(wasRegionName);
-        // Also restore panel state
-        this.panel?.showRegion(wasRegion);
-      }
-    } finally {
-      this.transitioning = false;
-      this.setModeButtonsEnabled(true);
+      const tileMap = new TileMap(this.mapContainer, mapOptions);
+      await tileMap.init(); // CRITICAL: Must await full initialization
+      this.map = tileMap;
+      document.body.dataset.mapMode = 'tile';
+    } catch (e) {
+      // TileMap already self-falls-back (Apple/Google → MapLibre) internally;
+      // reaching here means even MapLibre/WebGL failed. Surface a graceful message.
+      console.error('Map failed to initialize:', e);
+      this.showMapError();
     }
   }
 
-  private updateModeSelector(): void {
-    if (!this.modeSelector) return;
-    const buttons = this.modeSelector.querySelectorAll('.mode-btn');
-    buttons.forEach((btn) => {
-      const mode = (btn as HTMLElement).dataset.mode;
-      const isActive = mode === this.mapMode;
-      btn.classList.toggle('active', isActive);
-      (btn as HTMLElement).setAttribute('aria-pressed', String(isActive));
-    });
-  }
-
-  private setModeButtonsEnabled(enabled: boolean): void {
-    if (!this.modeSelector) return;
-    const buttons = this.modeSelector.querySelectorAll('.mode-btn');
-    buttons.forEach((btn) => {
-      (btn as HTMLButtonElement).disabled = !enabled;
-    });
-  }
-
-  private handleSpinToggle(): void {
-    if (this.mapMode !== '3d' || !this.map) return;
-
-    // Type guard: ensure map has toggleAutoRotate method
-    if (!('toggleAutoRotate' in this.map)) return;
-
-    // Call toggleAutoRotate on Map3D and update button state
-    (this.map as Map3D).toggleAutoRotate();
-    this.updateSpinButton();
-  }
-
-  private updateSpinButton(): void {
-    if (!this.spinBtn) return;
-
-    // Get current rotation state from Map3D (with type guard)
-    const isSpinning =
-      this.mapMode === '3d' && this.map && 'getAutoRotate' in this.map
-        ? (this.map as Map3D).getAutoRotate()
-        : false;
-
-    // Toggle active class based on rotation state
-    this.spinBtn.classList.toggle('active', isSpinning);
-
-    // Update ARIA state
-    this.spinBtn.setAttribute('aria-pressed', String(isSpinning));
-  }
-
-  private updateSpinButtonVisibility(): void {
-    if (!this.spinBtn) return;
-
-    // Show spin button only in 3D mode
-    this.spinBtn.hidden = this.mapMode !== '3d';
+  /** Render a graceful fallback message when the map cannot initialize at all. */
+  private showMapError(): void {
+    if (!this.mapContainer) return;
+    this.mapContainer.innerHTML = `
+      <div class="map-unavailable" role="alert">
+        <p class="map-unavailable-title">Map unavailable</p>
+        <p class="map-unavailable-hint">Please check your connection and reload the page.</p>
+      </div>`;
   }
 
   private handleTileStyleToggle(): void {
-    if (this.mapMode !== 'tile' || !this.map) return;
+    if (!this.map) return;
 
     // Toggle between light and dark
     this.tileStyle = this.tileStyle === 'light' ? 'dark' : 'light';
 
     // Update the main tile map
-    if (typeof (this.map as TileMap).setTileStyle === 'function') {
-      (this.map as TileMap).setTileStyle(this.tileStyle);
+    if (typeof this.map.setTileStyle === 'function') {
+      this.map.setTileStyle(this.tileStyle);
     }
 
     // Sync the minimap in the details panel
@@ -486,13 +291,6 @@ class App {
     );
   }
 
-  private updateTileStyleButtonVisibility(): void {
-    if (!this.tileStyleBtn) return;
-
-    // Show tile style toggle only in tile mode
-    this.tileStyleBtn.hidden = this.mapMode !== 'tile';
-  }
-
   private toggleSidebar(side: 'left' | 'right'): void {
     if (!this.layoutEl) return;
 
@@ -515,8 +313,7 @@ class App {
     btn?.setAttribute('aria-expanded', String(!isCollapsed));
 
     // Notify map renderers of container size change after CSS transition completes.
-    // MapLibre auto-resizes via ResizeObserver; SVG auto-scales via viewBox;
-    // 3D renderer listens for window resize events.
+    // MapLibre auto-resizes via ResizeObserver.
     // Uses event filtering (target + propertyName) to avoid spurious fires from
     // child element transitions, with a timeout fallback for cases where the
     // transition doesn't fire (prefers-reduced-motion, canceled, etc.).
@@ -585,7 +382,7 @@ class App {
       region =
         getClientRegions().find((r) => r.offices.some((o) => o.officeCode === office.officeCode)) ||
         null;
-      // Fallback: use regionName if available (from 3D map's getAllOffices)
+      // Fallback: use regionName if available
       if (!region && 'regionName' in office) {
         region = getClientRegion((office as OfficeWithRegion).regionName) || null;
       }

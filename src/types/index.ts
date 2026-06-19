@@ -85,22 +85,12 @@ export interface GlobalContacts {
 }
 
 /**
- * 3D camera view override per region
- */
-export interface CameraView {
-  distance: number;
-  lat: number;
-  lon: number;
-}
-
-/**
  * Brand theme overrides
  */
 export interface BrandTheme {
   primaryColor?: string;
   accentColor?: string;
   regionColors?: Record<string, string>;
-  cameraViews?: Record<string, CameraView>;
   mapProvider?: {
     provider: 'maplibre' | 'apple' | 'google';
     tileStyleUrl?: string;
@@ -121,28 +111,10 @@ export enum AppState {
 }
 
 /**
- * SVG viewBox coordinates
- */
-export interface ViewBox {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-/**
  * Map component options
  */
 export interface MapOptions {
   onRegionClick?: (regionName: string) => void;
   onOfficeClick?: (office: OfficeWithRegion) => void;
   onReset?: () => void;
-}
-
-/**
- * Camera position for 3D map
- */
-export interface CameraPosition {
-  position: [number, number, number];
-  target: [number, number, number];
 }

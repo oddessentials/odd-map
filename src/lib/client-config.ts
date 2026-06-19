@@ -166,21 +166,6 @@ export function getMapProviderConfig(): {
 }
 
 /**
- * Cross-validate that each office's region field matches a known region
- * from the map config. Emits console warnings for mismatches.
- */
-export function validateRegionReferences(mapConfigRegionNames: string[]): void {
-  const config = getActiveConfig();
-  const validRegions = new Set(mapConfigRegionNames);
-
-  for (const office of config.offices) {
-    if (!validRegions.has(office.region)) {
-      console.warn(`Office "${office.officeCode}" references unknown region "${office.region}".`);
-    }
-  }
-}
-
-/**
  * FOR TESTING: Reset the cached config
  */
 export function __resetConfig(): void {

@@ -2,6 +2,13 @@
 
 Auto-generated from all feature plans. Last updated: 2026-02-05
 
+> **Note (2026):** The 2D SVG map and 3D Three.js globe renderers were removed. The
+> interactive tile map (MapLibre GL / Apple MapKit / Google Maps) is the sole
+> renderer. Three.js, d3-geo, us-atlas, and topojson-client are no longer
+> dependencies, and the `*-map-config.json` / SVG coordinate-projection system is
+> gone. Map markers come from `office.coordinates.{lat,lon}` in each client config.
+> Several entries below predate this change and reference removed tech.
+
 ## Active Technologies
 
 - TypeScript 5.7 (ES2022 target), JavaScript (map-3d.js) + Vite 7.3.1, Zod ^4.3.5, d3-geo ^3.1.1 (move from devDependencies to dependencies), Three.js ^0.182.0 (014-runtime-lat-lon-projection)

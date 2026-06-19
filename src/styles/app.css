@@ -137,80 +137,6 @@ body {
   border-color: rgba(255, 255, 255, 0.8);
 }
 
-/* Three-way mode selector (2D / 3D / Map) */
-.mode-selector {
-  display: flex;
-  flex-shrink: 0;
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.4);
-}
-
-.mode-btn {
-  padding: var(--space-1) var(--space-3);
-  min-width: 44px;
-  border: none;
-  border-right: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--color-text-inverse);
-  font-size: var(--text-sm);
-  font-weight: var(--font-semibold);
-  cursor: pointer;
-  transition:
-    background var(--transition-fast),
-    color var(--transition-fast);
-}
-
-.mode-btn:last-child {
-  border-right: none;
-}
-
-.mode-btn:hover:not(:disabled):not(.active) {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-.mode-btn.active {
-  background: var(--color-accent);
-  color: var(--color-text-inverse);
-}
-
-.mode-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* Spin toggle button (3D mode only) */
-.spin-toggle[hidden] {
-  display: none;
-}
-
-.spin-toggle {
-  flex-shrink: 0;
-  min-width: 48px;
-  color: var(--color-text-inverse);
-  border-color: rgba(255, 255, 255, 0.6);
-  background: rgba(255, 255, 255, 0.1);
-  font-weight: var(--font-bold);
-  font-size: 1.25rem;
-  transition: all var(--transition-fast);
-}
-
-.spin-toggle:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.8);
-  transform: scale(1.05);
-}
-
-.spin-toggle.active {
-  background: var(--color-accent);
-  border-color: var(--color-accent);
-}
-
-.spin-toggle.active:hover:not(:disabled) {
-  background: var(--color-accent-hover);
-  border-color: var(--color-accent-hover);
-}
-
 /* ============================================
    SIDEBAR & PANELS
    ============================================ */
@@ -308,11 +234,28 @@ body {
   cursor: grab;
 }
 
-.map-container svg {
+/* Graceful fallback shown when the map cannot initialize at all */
+.map-unavailable {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
   width: 100%;
   height: 100%;
-  max-width: 100%;
-  max-height: 100%;
+  padding: var(--space-4);
+  text-align: center;
+  color: var(--color-text-muted, #555);
+}
+
+.map-unavailable-title {
+  font-size: var(--text-lg, 1.125rem);
+  font-weight: var(--font-semibold, 600);
+}
+
+.map-unavailable-hint {
+  font-size: var(--text-sm, 0.875rem);
+  color: var(--color-text-muted, #777);
 }
 
 /* ============================================
@@ -1025,13 +968,6 @@ body {
     padding: var(--space-2);
   }
 
-  /* Compact mode selector buttons */
-  .mode-btn {
-    padding: var(--space-1) var(--space-2);
-    min-width: 36px;
-    font-size: var(--text-xs);
-  }
-
   /* Hide sidebar collapse buttons (not needed on mobile) */
   .sidebar-collapse-btn {
     display: none;
@@ -1164,20 +1100,11 @@ body {
     min-height: 44px;
   }
 
-  .mode-btn {
-    min-height: 44px;
-  }
-
   .office-btn {
     min-height: 44px;
   }
 
   .map-expand-close-btn {
-    min-width: 44px;
-    min-height: 44px;
-  }
-
-  .office-modal-close {
     min-width: 44px;
     min-height: 44px;
   }
@@ -1269,87 +1196,6 @@ body {
 /* Panel slide animations */
 .panel-content {
   animation: slideUp var(--transition-normal) ease-out;
-}
-
-/* ============================================
-   ENHANCED MAP MARKERS
-   ============================================ */
-
-/* Base marker styling - professional drop-pin appearance */
-.marker {
-  fill: var(--color-primary, #00396c);
-  stroke: #fff;
-  stroke-width: 2;
-  cursor: pointer;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
-  transition:
-    fill 0.2s ease,
-    filter 0.2s ease,
-    stroke-width 0.2s ease;
-  transform-origin: center bottom;
-}
-
-/* Marker hover state - subtle professional feedback */
-.marker:hover {
-  fill: var(--color-accent, #ff6b35);
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4));
-}
-
-/* Selected marker state */
-.marker.selected {
-  fill: var(--color-accent, #ff6b35);
-  stroke: #fff;
-  stroke-width: 3;
-  filter: drop-shadow(0 4px 8px rgba(255, 107, 53, 0.5));
-}
-
-/* BEM marker states — applied by centralized updateMarkerStates() */
-.marker--selected {
-  fill: var(--color-accent, #ff6b35);
-  stroke: #fff;
-  stroke-width: 3;
-  filter: drop-shadow(0 4px 8px rgba(255, 107, 53, 0.5));
-}
-
-.marker--highlighted {
-  fill: var(--color-accent, #ff6b35);
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4));
-}
-
-.marker--dimmed {
-  opacity: 0.3;
-  pointer-events: none;
-}
-
-.marker--subdued {
-  opacity: 0.55;
-}
-
-/* Removed infinite pulse animation - too distracting */
-/* Selected markers are now distinguished by color and shadow only */
-
-/* Pulse ring behind selected marker */
-@keyframes pulseRing {
-  0% {
-    transform: scale(1);
-    opacity: 0.5;
-  }
-
-  100% {
-    transform: scale(2.5);
-    opacity: 0;
-  }
-}
-
-.marker-pulse-ring {
-  fill: var(--color-accent, #ff6b35);
-  opacity: 0;
-  pointer-events: none;
-}
-
-.marker.selected + .marker-pulse-ring,
-.marker-pulse-ring.active {
-  animation: pulseRing 1.5s ease-out infinite;
 }
 
 /* Smooth state indicator transitions */
@@ -1675,108 +1521,8 @@ body {
 }
 
 /* ============================================
-   OFFICE MODAL (3D Map)
+   OFFICE CONTACT CARD (Details Panel)
    ============================================ */
-
-.office-modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
-  z-index: 1000;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-}
-
-.office-modal-overlay.visible {
-  opacity: 1;
-}
-
-.office-modal {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) scale(0.95);
-  background: var(--color-bg, #fff);
-  border-radius: var(--radius-lg, 12px);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
-  width: min(420px, 90vw);
-  max-height: 85vh;
-  overflow-y: auto;
-  z-index: 1001;
-  opacity: 0;
-  transition:
-    opacity 0.2s ease,
-    transform 0.2s ease;
-}
-
-.office-modal.visible {
-  opacity: 1;
-  transform: translate(-50%, -50%) scale(1);
-}
-
-.office-modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--space-4, 16px);
-  border-bottom: 1px solid var(--color-border, #e5e7eb);
-}
-
-.office-modal-header h2 {
-  font-size: var(--text-xl, 1.25rem);
-  font-weight: var(--font-semibold, 600);
-  color: var(--color-primary, #00396c);
-  margin: 0;
-}
-
-.office-modal-close {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border: none;
-  background: transparent;
-  border-radius: var(--radius-sm, 4px);
-  color: var(--color-text-muted, #6b7280);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.office-modal-close:hover {
-  background: var(--color-bg-alt, #f3f4f6);
-  color: var(--color-text, #1f2937);
-}
-
-.office-modal-close:focus-visible {
-  outline: 2px solid var(--color-accent, #ff6b35);
-  outline-offset: 2px;
-}
-
-.office-modal-body {
-  padding: var(--space-4, 16px);
-}
-
-.office-modal-info .office-type {
-  color: var(--color-text-muted, #6b7280);
-  font-size: var(--text-sm, 0.875rem);
-  margin-bottom: var(--space-3, 12px);
-}
-
-.office-modal-info .office-address {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-2, 8px);
-  color: var(--color-text, #1f2937);
-  margin-bottom: var(--space-4, 16px);
-}
-
-.office-modal-info .office-address svg {
-  flex-shrink: 0;
-  margin-top: 2px;
-  color: var(--color-text-muted, #6b7280);
-}
 
 .office-contact {
   background: var(--color-bg-alt, #f3f4f6);
@@ -1816,39 +1562,7 @@ body {
   text-underline-offset: 2px;
 }
 
-.office-modal-footer {
-  padding: var(--space-4, 16px);
-  padding-bottom: max(var(--space-4, 16px), env(safe-area-inset-bottom, 0px));
-  border-top: 1px solid var(--color-border, #e5e7eb);
-}
-
-.directions-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2, 8px);
-  width: 100%;
-  padding: var(--space-3, 12px);
-  background: var(--color-primary, #00396c);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-md, 8px);
-  font-weight: var(--font-semibold, 600);
-  text-decoration: none;
-  cursor: pointer;
-  transition: background 0.15s ease;
-}
-
-.directions-btn:hover {
-  background: var(--color-primary-dark, #002d54);
-}
-
-.directions-btn:focus-visible {
-  outline: 2px solid var(--color-accent, #ff6b35);
-  outline-offset: 2px;
-}
-
-/* Dark mode for office modal contact card (must follow base rules to win cascade) */
+/* Dark mode for office contact card (must follow base rules to win cascade) */
 @media (prefers-color-scheme: dark) {
   .office-contact {
     background: #252540;
@@ -1865,24 +1579,4 @@ body {
   .office-contact a {
     color: var(--color-accent-on-dark);
   }
-}
-
-/* ============================================
-   3D MAP TOOLTIP
-   ============================================ */
-
-.map3d-tooltip {
-  position: absolute;
-  background: rgba(0, 0, 0, 0.85);
-  color: #fff;
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 500;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.15s ease;
-  z-index: 100;
-  white-space: nowrap;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
