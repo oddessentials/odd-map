@@ -170,7 +170,7 @@ export function restoreConfig(configPath: string): boolean {
 if (require.main === module) {
   const args = process.argv.slice(2);
   const command = args[0];
-  const configPath = args[1] || 'config/usg-map-config.json';
+  const configPath = args[1] || 'config/usg-client.json';
 
   try {
     if (command === 'backup') {

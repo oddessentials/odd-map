@@ -7,8 +7,6 @@
 
 export interface ClientRegistry {
   clients: string[];
-  configPath: string;
-  clientConfigPath: string;
   fixtureClients?: string[];
   defaultClient?: string;
 }
