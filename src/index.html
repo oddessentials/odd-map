@@ -9,16 +9,6 @@
     />
     <title>Locations Map</title>
 
-    <!-- Import Map for ES Modules -->
-    <script type="importmap">
-      {
-        "imports": {
-          "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
-          "three/addons/": "https://unpkg.com/three@0.170.0/examples/jsm/"
-        }
-      }
-    </script>
-
     <!-- Styles -->
     <link rel="stylesheet" href="./styles/base.css" />
     <link rel="stylesheet" href="./styles/app.css" />
@@ -69,14 +59,7 @@
           <span class="reset-btn-text">Reset View</span>
         </button>
 
-        <!-- Map mode selector -->
-        <div class="mode-selector" role="group" aria-label="Map mode">
-          <button class="mode-btn active" data-mode="tile" aria-pressed="true">Tile</button>
-          <button class="mode-btn" data-mode="2d" aria-pressed="false">2D</button>
-          <button class="mode-btn" data-mode="3d" aria-pressed="false">3D</button>
-        </div>
-
-        <!-- Tile style toggle (Tile mode only) -->
+        <!-- Map style toggle (light / dark) -->
         <button
           id="tile-style-toggle"
           type="button"
@@ -84,7 +67,6 @@
           aria-label="Switch to dark map"
           aria-pressed="false"
           title="Switch to dark map"
-          hidden
         >
           <svg
             class="icon-sun"
@@ -120,19 +102,6 @@
           >
             <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
           </svg>
-        </button>
-
-        <!-- Spin toggle button (3D mode only) -->
-        <button
-          id="spin-toggle"
-          type="button"
-          class="btn btn-secondary spin-toggle"
-          aria-label="Toggle globe rotation"
-          aria-pressed="false"
-          title="Toggle globe rotation"
-          hidden
-        >
-          ↻
         </button>
       </div>
     </header>
@@ -196,7 +165,7 @@
             role="application"
             aria-label="Interactive locations map"
           >
-            <!-- Populated by MapSvg component -->
+            <!-- Populated by TileMap component -->
           </div>
         </section>
 

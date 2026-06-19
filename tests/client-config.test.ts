@@ -95,13 +95,6 @@ describe('Client Config Schema Validation', () => {
           regionColors: {
             'Test Region': '#aabbcc',
           },
-          cameraViews: {
-            'Test Region': {
-              distance: 5,
-              lat: 40.0,
-              lon: -80.0,
-            },
-          },
         },
         metadata: {
           source: 'test',

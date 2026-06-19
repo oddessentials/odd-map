@@ -134,13 +134,6 @@
       "Northeast Region": "#2980b9",
       "South Region": "#27ae60"
     },
-    "cameraViews": {
-      "Northeast Region": {
-        "distance": 1.5,
-        "lat": 41.0,
-        "lon": -74.0
-      }
-    },
     "mapProvider": {
       "provider": "apple",
       "appleMapToken": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IkE1Nko1OUEyM1kifQ.eyJpc3MiOiJIM0ZZNjJXNThXIiwiaWF0IjoxNzcwNTc5MzIyLCJleHAiOjE3ODYxMzEzMjJ9.2QPtlHJALX1Y-0Al6kEAdUf1YECX4nYIZyCPwDEA7mKhDdzomN1UyON_mZRXTq90mKDNVFDw_7ouVWaJ3zYIXA",

@@ -1,10 +1,10 @@
 # odd-map
 
 [![CI](https://github.com/oddessentials/odd-map/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/oddessentials/odd-map/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/tests-742_passing-brightgreen)](https://github.com/oddessentials/odd-map/actions)
+[![Tests](https://img.shields.io/badge/tests-passing-brightgreen)](https://github.com/oddessentials/odd-map/actions)
 [![Demo](https://img.shields.io/badge/demo-live-blue)](https://maps.oddessentials.com/)
 
-A white-label, mobile-friendly interactive office locator with three rendering modes, region-based navigation, and multi-client theming. Fully static — no backend required.
+A white-label, mobile-friendly interactive office locator with an interactive tile map, region-based navigation, and multi-client theming. Fully static — no backend required.
 
 **[View Live Demo](https://maps.oddessentials.com/)** · Works on desktop & mobile
 
@@ -12,10 +12,9 @@ A white-label, mobile-friendly interactive office locator with three rendering m
 
 ## ✨ Features
 
-- 🗺️ **Three Map Modes** — 2D SVG with pan/zoom, 3D Three.js globe with rotation, and interactive tile map (MapLibre GL / Apple MapKit / Google Maps)
+- 🗺️ **Interactive Tile Map** — MapLibre GL / Apple MapKit / Google Maps, with marker clustering and light/dark basemaps
 - 📍 **Region-Based Navigation** — Click regions to zoom in, select offices for full details with inline mini-map
 - 🏷️ **White-Label Multi-Client** — Per-client branding, theme colors, office data, and map provider config via JSON
-- 🌐 **Runtime Lat/Lon Projection** — v2 config schema with d3-geo projection; no more pre-computed SVG coordinates
 - 📱 **Mobile-First Touch** — Pinch-to-zoom, swipe-to-dismiss bottom sheet, 44px touch targets, safe area insets for notched devices
 - 📐 **Collapsible Sidebars** — Desktop sidebars collapse/expand with smooth CSS Grid transitions and ARIA-compliant toggle buttons
 - ♿ **Accessible** — Keyboard navigation, ARIA labels, focus management, reduced-motion support
@@ -39,7 +38,7 @@ https://your-domain.com/?client=oddessentials    # explicit client
 https://your-domain.com/?client=acme             # ACME Corp (Google Maps)
 ```
 
-To add a new client, create two JSON files in `config/` and register the client ID in the appropriate `clients.*.json` registry. See [Multi-Client Configuration](#multi-client-configuration) for details.
+To add a new client, create a `config/{client}-client.json` file and register the client ID in the appropriate `clients.*.json` registry. See [Multi-Client Configuration](#multi-client-configuration) for details.
 
 ## 🛠️ Commands
 
@@ -48,8 +47,8 @@ To add a new client, create two JSON files in `config/` and register the client 
 | `npm run dev`                           | Start Vite dev server                                               |
 | `npm run build`                         | Production build to `dist/`                                         |
 | `npm run verify`                        | Full CI check — lint, format, typecheck, client verification, tests |
-| `npm test`                              | Run 742 tests in watch mode (Vitest)                                |
-| `npm run test:ci`                       | Verify all clients + run tests once                                 |
+| `npm test`                              | Run the test suite in watch mode (Vitest)                           |
+| `npm run test:ci`                       | Run the test suite once (Vitest)                                    |
 | `npm run typecheck`                     | TypeScript type checking                                            |
 | `npm run lint`                          | ESLint check                                                        |
 | `npm run format`                        | Prettier format                                                     |
@@ -62,25 +61,21 @@ odd-map/
 ├── config/                   # Client configuration files
 │   ├── clients.prod.json           # Production client registry
 │   ├── clients.demo.json           # Demo (GitHub Pages) registry
-│   ├── {client}-client.json        # Branding: name, logo, theme colors
-│   └── {client}-map-config.json    # Data: offices, regions, coordinates
+│   └── {client}-client.json        # Branding + offices, regions, coordinates, map provider
 ├── scripts/                  # Build, data pipeline & verification
 │   ├── generate-mapkit-token.js    # Generate Apple MapKit JWT from .p8 key
 │   ├── scrape_locations.py         # Scrape office data from website
 │   ├── geocode_locations.py        # Geocode addresses to lat/lon
 │   ├── generate_data_artifact.py   # Generate config from scraped data
-│   ├── verify-all-clients.ts       # Validate all client configs
-│   ├── verify-map-integrity.ts     # SVG map + data integrity checks
+│   ├── verify-config-files.ts      # Validate all client configs
 │   └── ...                         # Additional tooling scripts
 ├── src/
 │   ├── app.ts                      # Application entry point
 │   ├── components/                 # UI components
-│   │   ├── map-svg.ts              # 2D SVG map (pan, zoom, pinch)
-│   │   ├── map-3d.js               # 3D Three.js globe
-│   │   ├── tile-map.ts             # Tile map (MapLibre / Apple / Google)
+│   │   ├── tile-map.ts             # Interactive tile map (MapLibre / Apple / Google)
 │   │   ├── mini-map.ts             # Inline mini-map in detail views
 │   │   ├── details-panel.js        # Office details sidebar / bottom sheet
-│   │   └── ...                     # Modal, region list, overlays
+│   │   └── ...                     # Region list, specialty divisions, overlays
 │   ├── lib/                        # Shared utilities & config loading
 │   │   ├── client-config.ts        # Client config loader + Zod validation
 │   │   ├── map-providers/          # Tile map provider abstraction layer
@@ -89,11 +84,11 @@ odd-map/
 │   │   │   ├── maplibre-provider.ts # MapLibre GL JS (default, free)
 │   │   │   ├── apple-provider.ts   # Apple MapKit JS (CDN, JWT auth)
 │   │   │   └── google-provider.ts  # Google Maps JS API (CDN, API key)
-│   │   └── ...                     # Projection, theming, escape, state
+│   │   └── ...                     # Theming, escape-html, marker state
 │   ├── styles/                     # CSS (design tokens, base, app)
 │   ├── types/                      # TypeScript type definitions
 │   └── index.html                  # HTML entry point
-├── tests/                    # 742 Vitest unit tests across 46 suites
+├── tests/                    # Vitest unit tests
 └── docs/                     # GitHub Pages deployment (auto-generated)
 ```
 
@@ -182,20 +177,19 @@ node scripts/generate-mapkit-token.js \
 
 ## 🏢 Multi-Client Configuration
 
-Each client requires two JSON files in `config/`:
+Each client is defined by a single JSON file in `config/`:
 
-| File                       | Purpose                                                     |
-| -------------------------- | ----------------------------------------------------------- |
-| `{client}-client.json`     | Branding — name, logo URL, theme colors, tagline            |
-| `{client}-map-config.json` | Data — offices, regions, coordinates, map provider settings |
+| File                   | Purpose                                                                          |
+| ---------------------- | -------------------------------------------------------------------------------- |
+| `{client}-client.json` | Branding (name, logo, theme colors, tagline), offices, regions, and map provider |
 
 Clients are registered in `clients.*.json` (one per environment). The active client is resolved at runtime from the `?client=` URL parameter, falling back to the registry's `defaultClient`.
 
 **To add a new client:**
 
-1. Create `config/yourclient-client.json` with branding and theme
-2. Create `config/yourclient-map-config.json` with office/region data
-3. Add `"yourclient"` to the `clients` array in the appropriate `clients.*.json`
+1. Create `config/yourclient-client.json` with branding, theme, and office data
+2. Add `"yourclient"` to the `clients` array in the appropriate `clients.*.json`
+3. Register the client in the import maps in `src/lib/client-registry.ts`
 4. Run `npm run verify` to validate
 
 ## 🔧 Data Pipeline (Python)
@@ -218,16 +212,15 @@ npm run build:data   # Generate config JSON from scraped data
 
 ## 🧰 Tech Stack
 
-| Layer        | Technology                                          |
-| ------------ | --------------------------------------------------- |
-| Language     | TypeScript 5.7 (ES2022), JavaScript (3D module)     |
-| Bundler      | Vite 7.3.1                                          |
-| Testing      | Vitest 4.0.17, jsdom — 742 tests across 46 suites   |
-| 3D Rendering | Three.js 0.182                                      |
-| Tile Maps    | MapLibre GL JS, Apple MapKit JS, Google Maps JS API |
-| Validation   | Zod 4.3                                             |
-| CI/CD        | GitHub Actions, Husky, lint-staged, commitlint      |
-| Linting      | ESLint 9, Prettier 3.8                              |
+| Layer      | Technology                                          |
+| ---------- | --------------------------------------------------- |
+| Language   | TypeScript 5.7 (ES2022), JavaScript                 |
+| Bundler    | Vite 7.3.1                                          |
+| Testing    | Vitest 4.0, jsdom                                   |
+| Tile Maps  | MapLibre GL JS, Apple MapKit JS, Google Maps JS API |
+| Validation | Zod 4.3                                             |
+| CI/CD      | GitHub Actions, Husky, lint-staged, commitlint      |
+| Linting    | ESLint 9, Prettier 3.8                              |
 
 ## 📋 Requirements
 

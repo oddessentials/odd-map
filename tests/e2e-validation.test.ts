@@ -12,23 +12,12 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import { ClientConfigSchema, formatValidationErrors } from '../src/lib/client-config.schema';
 import { computeMarkerStates } from '../src/lib/marker-state';
-import {
-  DEFAULT_REGION_COLORS,
-  DEFAULT_CAMERA_VIEWS,
-  DEFAULT_USA_VIEW,
-  hexToThreeColor,
-  assertValidHex,
-} from '../src/lib/defaults';
+import { assertValidHex } from '../src/lib/defaults';
 
 // ─── Helpers ──────────────────────────────────────────────────────
 
 function loadRawConfig(clientId: string): unknown {
   const path = join(__dirname, '..', 'config', `${clientId}-client.json`);
-  return JSON.parse(readFileSync(path, 'utf-8'));
-}
-
-function loadRawMapConfig(clientId: string): Record<string, unknown> {
-  const path = join(__dirname, '..', 'config', `${clientId}-map-config.json`);
   return JSON.parse(readFileSync(path, 'utf-8'));
 }
 
@@ -92,12 +81,6 @@ describe('T042: End-to-End Validation', () => {
         expect(result.data.specialtyDivisions!.length).toBeGreaterThan(0);
       }
     });
-
-    it('map config has coordinates for all 13 offices', () => {
-      const mapConfig = loadRawMapConfig('usg');
-      const coords = mapConfig.coordinates as Array<{ officeCode: string }>;
-      expect(coords).toHaveLength(13);
-    });
   });
 
   describe('Odd Essentials Config', () => {
@@ -140,19 +123,6 @@ describe('T042: End-to-End Validation', () => {
         expect(result.data.name).toBe('Odd Essentials');
         expect(result.data.copyrightHolder).toBe('Odd Essentials LLC');
       }
-    });
-
-    it('map config has coordinates for all 5 offices', () => {
-      const mapConfig = loadRawMapConfig('oddessentials');
-      const coords = mapConfig.coordinates as Array<{ officeCode: string }>;
-      expect(coords).toHaveLength(5);
-    });
-
-    it('map config has 3 regions (Phantom Region deliberately absent)', () => {
-      const mapConfig = loadRawMapConfig('oddessentials');
-      const regions = mapConfig.regions as Array<{ name: string }>;
-      expect(regions).toHaveLength(3);
-      expect(regions.map((r) => r.name)).not.toContain('Phantom Region');
     });
   });
 
@@ -230,14 +200,6 @@ describe('T043: Odd Essentials Edge Cases (SC-008)', () => {
     expect(overriddenRegions).not.toContain('West Region');
   });
 
-  it('Edge Case 6: partial cameraViews (only Northeast)', () => {
-    expect(config.theme?.cameraViews).toBeDefined();
-    const overriddenViews = Object.keys(config.theme!.cameraViews!);
-    expect(overriddenViews).toContain('Northeast Region');
-    expect(overriddenViews).not.toContain('South Region');
-    expect(overriddenViews).not.toContain('West Region');
-  });
-
   it('Edge Case 7: personnel entry without vcardUrl', () => {
     const marco = config.regionalPersonnel?.['South Region']?.[0];
     expect(marco).toBeDefined();
@@ -245,18 +207,7 @@ describe('T043: Odd Essentials Edge Cases (SC-008)', () => {
     expect(marco?.vcardUrl).toBeUndefined();
   });
 
-  it('Edge Case 8: office assigned to unmatched region (Phantom Region)', () => {
-    const phantomOffice = config.offices.find((o) => o.region === 'Phantom Region');
-    expect(phantomOffice).toBeDefined();
-    expect(phantomOffice?.officeCode).toBe('OE AZ1');
-
-    // Verify Phantom Region is NOT in the map config regions
-    const mapConfig = loadRawMapConfig('oddessentials');
-    const mapRegionNames = (mapConfig.regions as Array<{ name: string }>).map((r) => r.name);
-    expect(mapRegionNames).not.toContain('Phantom Region');
-  });
-
-  it('Edge Case 9: schemaVersion is 1', () => {
+  it('Edge Case 8: schemaVersion is 1', () => {
     expect(config.schemaVersion).toBe(1);
   });
 });
@@ -301,61 +252,11 @@ describe('Marker state centralization validation (SC-009)', () => {
 // ─── Defaults Module Validation ───────────────────────────────────
 
 describe('Defaults module validation', () => {
-  it('DEFAULT_REGION_COLORS has entries for all 6 USG regions', () => {
-    expect(Object.keys(DEFAULT_REGION_COLORS)).toHaveLength(6);
-    expect(DEFAULT_REGION_COLORS['Northeast Region']).toBeDefined();
-    expect(DEFAULT_REGION_COLORS['Southeast Region']).toBeDefined();
-    expect(DEFAULT_REGION_COLORS['South Region']).toBeDefined();
-    expect(DEFAULT_REGION_COLORS['Southern California']).toBeDefined();
-    expect(DEFAULT_REGION_COLORS['West Region']).toBeDefined();
-    expect(DEFAULT_REGION_COLORS['Midwest Region']).toBeDefined();
-  });
-
-  it('DEFAULT_CAMERA_VIEWS has entries for all 6 USG regions', () => {
-    expect(Object.keys(DEFAULT_CAMERA_VIEWS)).toHaveLength(6);
-    for (const view of Object.values(DEFAULT_CAMERA_VIEWS)) {
-      expect(view.distance).toBeGreaterThan(0);
-      expect(typeof view.lat).toBe('number');
-      expect(typeof view.lon).toBe('number');
-    }
-  });
-
-  it('DEFAULT_USA_VIEW has correct structure', () => {
-    expect(DEFAULT_USA_VIEW.distance).toBe(280);
-    expect(DEFAULT_USA_VIEW.lat).toBe(39);
-    expect(DEFAULT_USA_VIEW.lon).toBe(-98);
-  });
-
-  it('hexToThreeColor converts CSS hex to integer', () => {
-    expect(hexToThreeColor('#1a5276')).toBe(0x1a5276);
-    expect(hexToThreeColor('#ff0000')).toBe(0xff0000);
-    expect(hexToThreeColor('#000000')).toBe(0x000000);
-  });
-
-  it('hexToThreeColor rejects invalid hex colors', () => {
-    expect(() => hexToThreeColor('#GGGGGG')).toThrow('Invalid hex color');
-    expect(() => hexToThreeColor('notahex')).toThrow('Invalid hex color');
-    expect(() => hexToThreeColor('#FFF')).toThrow('Invalid hex color');
-  });
-
   it('assertValidHex accepts valid and rejects invalid', () => {
     expect(() => assertValidHex('#1a5276')).not.toThrow();
     expect(() => assertValidHex('#FF00AA')).not.toThrow();
     expect(() => assertValidHex('red')).toThrow('Invalid hex color');
     expect(() => assertValidHex('#abc')).toThrow('Invalid hex color');
-  });
-
-  it('config overrides merge correctly with defaults', () => {
-    const oeConfig = ClientConfigSchema.parse(loadRawConfig('oddessentials'));
-    const merged = { ...DEFAULT_REGION_COLORS, ...oeConfig.theme?.regionColors };
-
-    // Overridden regions get OE colors
-    expect(merged['Northeast Region']).toBe('#2980b9');
-    expect(merged['South Region']).toBe('#27ae60');
-
-    // Non-overridden regions keep defaults
-    expect(merged['West Region']).toBe(DEFAULT_REGION_COLORS['West Region']);
-    expect(merged['Southeast Region']).toBe(DEFAULT_REGION_COLORS['Southeast Region']);
   });
 });
 
@@ -434,15 +335,12 @@ describe('T044: Quickstart Validation', () => {
     }
   });
 
-  it('acme and demo remain registered (acme fully wired, demo a fixture)', () => {
-    // acme is now wired into the client-config import maps and is user-selectable;
-    // demo remains a projection/test fixture with no client-config entry and is
-    // excluded from getAvailableClients. Both stay listed in the test registry.
+  it('acme remains registered and user-selectable', () => {
+    // acme is wired into the client-config import maps and is user-selectable.
     const registry = JSON.parse(
       readFileSync(join(__dirname, '..', 'config', 'clients.test.json'), 'utf-8')
     );
     expect(registry.clients).toContain('acme');
-    expect(registry.clients).toContain('demo');
   });
 });
 

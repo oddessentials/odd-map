@@ -41,16 +41,6 @@ describe('Mobile Header CSS', () => {
     expect(mobileSection).toContain('.reset-btn-text');
     expect(mobileSection).toMatch(/\.reset-btn-text\s*\{[^}]*display:\s*none/);
   });
-
-  it('compacts mode-btn padding on mobile', () => {
-    expect(mobileSection).toMatch(
-      /\.mode-btn\s*\{[^}]*padding:\s*var\(--space-1\)\s+var\(--space-2\)/
-    );
-  });
-
-  it('reduces mode-btn font-size on mobile', () => {
-    expect(mobileSection).toMatch(/\.mode-btn\s*\{[^}]*font-size:\s*var\(--text-xs\)/);
-  });
 });
 
 describe('Mobile Header HTML', () => {
@@ -71,12 +61,6 @@ describe('Mobile Header HTML', () => {
     expect(resetBtnMatch).toBeTruthy();
     expect(resetBtnMatch![0]).toContain('<svg');
     expect(resetBtnMatch![0]).toContain('reset-btn-text');
-  });
-
-  it('mode selector buttons are present with data-mode attributes', () => {
-    expect(htmlContent).toContain('data-mode="tile"');
-    expect(htmlContent).toContain('data-mode="2d"');
-    expect(htmlContent).toContain('data-mode="3d"');
   });
 
   it('reset button has aria-label for mobile icon-only accessibility', () => {

@@ -1,6 +1,3 @@
 {
-  "clients": ["oddessentials", "usg", "acme", "demo"],
-  "fixtureClients": ["demo"],
-  "configPath": "config/{clientId}-map-config.json",
-  "clientConfigPath": "config/{clientId}-client.json"
+  "clients": ["oddessentials", "usg", "acme"]
 }

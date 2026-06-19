@@ -65,12 +65,6 @@ const GlobalContactsSchema = z.object({
     .optional(),
 });
 
-const CameraViewSchema = z.object({
-  distance: z.number().positive(),
-  lat: z.number(),
-  lon: z.number(),
-});
-
 const MapProviderConfigSchema = z
   .object({
     provider: z.enum(['maplibre', 'apple', 'google']).default('maplibre'),
@@ -86,7 +80,6 @@ const BrandThemeSchema = z.object({
   primaryColor: HexColorSchema.optional(),
   accentColor: HexColorSchema.optional(),
   regionColors: z.record(z.string(), HexColorSchema).optional(),
-  cameraViews: z.record(z.string(), CameraViewSchema).optional(),
   mapProvider: MapProviderConfigSchema,
 });
 

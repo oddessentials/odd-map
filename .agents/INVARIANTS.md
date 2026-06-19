@@ -4,6 +4,23 @@ Non-negotiable architectural principles. Violations require explicit justificati
 
 ---
 
+> **⚠️ Architecture update (2026): the tile map is the sole renderer.**
+>
+> The custom **2D SVG map** and **3D Three.js globe** renderers were removed, along
+> with the runtime coordinate-projection system (d3-geo) and the per-client
+> `*-map-config.json` SVG coordinate data. The interactive **tile map**
+> (MapLibre GL / Apple MapKit / Google Maps) is now the only renderer, consuming
+> `office.coordinates.{lat,lon}` directly from each client config.
+>
+> Invariants below that reference the 2D SVG map, the 3D globe, SVG coordinate
+> projection, or a shared SVG map asset — notably **#1, #2, #3, #8, #12, #13**, the
+> 2D/3D split in **#5**, the SVG-asset clause in **WLC-001**, and the map-asset
+> derivation in **WLC-006** — are retained only as historical record and **no
+> longer apply**. The remaining principles, including the white-label (WLC-\*)
+> invariants, stay in force.
+
+---
+
 ## 1. Deterministic Coordinate Rendering
 
 > **Pins render where they belong—always.**
