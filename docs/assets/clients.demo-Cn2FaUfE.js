@@ -1,1 +1,0 @@
-const n=["oddessentials","usg","acme"],t="oddessentials",s="config/{clientId}-map-config.json",c="config/{clientId}-client.json",e={clients:n,defaultClient:t,configPath:s,clientConfigPath:c};export{c as clientConfigPath,n as clients,s as configPath,e as default,t as defaultClient};
